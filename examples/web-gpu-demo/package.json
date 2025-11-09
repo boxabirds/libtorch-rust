@@ -11,7 +11,8 @@
     "serve-dist": "cd dist && python3 -m http.server 8000",
     "download-model": "bun run scripts/download-model.ts",
     "download-mnist": "bun run scripts/download-mnist-dataset.ts",
-    "setup": "bun run download-mnist && bun run download-model"
+    "build-wasm": "bash scripts/build-wasm.sh",
+    "setup": "bun run download-mnist && bun run download-model && bun run build-wasm"
   },
   "dependencies": {
     "react": "^18.2.0",

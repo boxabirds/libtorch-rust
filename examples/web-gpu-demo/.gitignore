@@ -7,3 +7,4 @@ public/models/*.json
 public/data/mnist/*.json
 public/data/mnist/*.gz
 scripts/data/
+public/wasm/
