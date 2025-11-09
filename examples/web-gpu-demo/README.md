@@ -46,22 +46,22 @@ bun install
 
 ## Running the Demo
 
-### Development Mode
+### Development Mode (Recommended)
 
 ```bash
-bun run index.html
+bun run dev
 ```
 
-Then open your browser to `http://localhost:3000`
+This will start Bun's built-in server and open your browser automatically.
 
 ### Alternative: Simple HTTP Server
 
 ```bash
 # Using Python
-python -m http.server 8000
+python3 -m http.server 8000
 
-# Using Bun
-bunx serve .
+# Or use the npm script
+bun run serve
 ```
 
 Then navigate to `http://localhost:8000`

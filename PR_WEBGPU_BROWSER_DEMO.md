@@ -132,12 +132,8 @@ cd examples/web-gpu-demo
 # Install dependencies
 bun install
 
-# Option 1: Simple HTTP server
-python3 -m http.server 8000
-# Then open http://localhost:8000
-
-# Option 2: Using Bun
-bun --bun run index.html
+# Run development server (recommended)
+bun run dev
 ```
 
 **Browser Requirements:**
@@ -233,10 +229,11 @@ Browser demo only (not affecting core library):
 
 1. **Check browser demo:**
    ```bash
-   cd examples/web-gpu-demo && bun install
-   python3 -m http.server 8000
+   cd examples/web-gpu-demo
+   bun install
+   bun run dev
    ```
-   Open in Chrome 113+ and click "Run GPU Demos"
+   Opens automatically in your browser, then click "Run GPU Demos"
 
 2. **Check Rust demo (if GPU available):**
    ```bash
