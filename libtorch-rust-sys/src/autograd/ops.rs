@@ -5,6 +5,7 @@
 
 use crate::autograd::{Edge, GradNode};
 use crate::TensorImpl;
+use crate::error::Result;
 use std::sync::Arc;
 
 /// Backward operation for multiplication: z = x * y
@@ -18,9 +19,22 @@ pub struct MulBackward {
     x_value: TensorImpl,
     y_value: TensorImpl,
 
+    /// Pointers to original input tensors (for gradient accumulation)
+    /// These are raw pointers because we can't store Arc/Rc references
+    /// Safety: These pointers are only used during backward(), which is called
+    /// while the original tensors are still alive
+    x_ptr: *mut TensorImpl,
+    y_ptr: *mut TensorImpl,
+
     /// Edges to the inputs' grad_fns
     next_edges: Vec<Edge>,
 }
+
+// Safety: The raw pointers are only dereferenced during backward(),
+// which is called while the original tensors are still alive.
+// The backward pass is synchronous and completes before the tensors are dropped.
+unsafe impl Send for MulBackward {}
+unsafe impl Sync for MulBackward {}
 
 impl MulBackward {
     pub fn new(x: &TensorImpl, y: &TensorImpl) -> Arc<Self> {
@@ -39,6 +53,8 @@ impl MulBackward {
         Arc::new(MulBackward {
             x_value: x.clone(),
             y_value: y.clone(),
+            x_ptr: x as *const TensorImpl as *mut TensorImpl,
+            y_ptr: y as *const TensorImpl as *mut TensorImpl,
             next_edges: edges,
         })
     }
@@ -70,6 +86,33 @@ impl GradNode for MulBackward {
 
     fn next_edges(&self) -> &[Edge] {
         &self.next_edges
+    }
+
+    fn accumulate_grads(&self, grad_outputs: &[&TensorImpl]) -> Result<()> {
+        assert_eq!(grad_outputs.len(), 1, "MulBackward expects 1 grad_output");
+        let grad_output = grad_outputs[0];
+
+        // Safety: These pointers are valid during the backward pass
+        // because the original tensors outlive the backward call
+        unsafe {
+            // Only accumulate at leaf tensors (those without grad_fn)
+            // Intermediate tensors will have their gradients computed by
+            // traversing through their own grad_fn
+
+            // Accumulate gradient for x: dL/dx = dL/dz * y
+            if self.x_value.requires_grad() && self.x_value.grad_fn().is_none() && !self.x_ptr.is_null() {
+                let grad_x = grad_output.mul(&self.y_value)?;
+                (*self.x_ptr).accumulate_grad(grad_x)?;
+            }
+
+            // Accumulate gradient for y: dL/dy = dL/dz * x
+            if self.y_value.requires_grad() && self.y_value.grad_fn().is_none() && !self.y_ptr.is_null() {
+                let grad_y = grad_output.mul(&self.x_value)?;
+                (*self.y_ptr).accumulate_grad(grad_y)?;
+            }
+        }
+
+        Ok(())
     }
 }
 

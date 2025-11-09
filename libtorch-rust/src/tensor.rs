@@ -415,6 +415,39 @@ impl Tensor {
     pub fn has_grad_fn(&self) -> bool {
         self.inner.grad_fn().is_some()
     }
+
+    /// Perform backward pass from this tensor (must be a scalar)
+    ///
+    /// Computes gradients for all tensors in the computation graph that have
+    /// `requires_grad=true`. This tensor should typically be a loss value.
+    ///
+    /// # Example
+    /// ```no_run
+    /// use tch::{Tensor, Kind, Device};
+    ///
+    /// let mut x = Tensor::from_slice(&[2.0f32]);
+    /// let mut y = Tensor::from_slice(&[3.0f32]);
+    /// x.set_requires_grad(true);
+    /// y.set_requires_grad(true);
+    ///
+    /// let mut z = &x * &y;
+    /// z.backward();
+    ///
+    /// // Now x.grad() and y.grad() contain the gradients
+    /// ```
+    pub fn backward(&mut self) {
+        libtorch_rust_sys::autograd::backward(&mut self.inner)
+            .expect("Backward pass failed");
+    }
+
+    /// Perform backward pass with a custom gradient
+    ///
+    /// # Arguments
+    /// * `gradient` - The gradient to use for this tensor
+    pub fn backward_with_gradient(&mut self, gradient: Tensor) {
+        libtorch_rust_sys::autograd::backward_with_gradient(&mut self.inner, gradient.inner)
+            .expect("Backward pass with gradient failed");
+    }
 }
 
 // Operator overloading

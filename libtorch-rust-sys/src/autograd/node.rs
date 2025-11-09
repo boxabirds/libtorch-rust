@@ -1,5 +1,5 @@
 use crate::TensorImpl;
-use std::sync::Arc;
+use crate::error::Result;
 
 /// Node in the computational graph representing an operation
 ///
@@ -20,4 +20,19 @@ pub trait GradNode: Send + Sync {
 
     /// Get the edges connecting to input tensors
     fn next_edges(&self) -> &[super::Edge];
+
+    /// Accumulate gradients at input tensors (for leaf tensors)
+    ///
+    /// This is called during the backward pass to accumulate gradients
+    /// at leaf tensors that require gradients.
+    ///
+    /// # Arguments
+    /// * `grad_outputs` - Gradients flowing backward from the outputs
+    ///
+    /// # Returns
+    /// Ok(()) on success, Err on failure
+    fn accumulate_grads(&self, _grad_outputs: &[&TensorImpl]) -> Result<()> {
+        // Default implementation does nothing
+        Ok(())
+    }
 }

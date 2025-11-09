@@ -8,4 +8,4 @@ pub mod ops;
 pub use node::GradNode;
 pub use edge::Edge;
 pub use context::{is_grad_enabled, set_grad_enabled, NoGradGuard};
-pub use backward::topological_sort_grad_fns;
+pub use backward::{topological_sort_grad_fns, backward, backward_with_gradient};

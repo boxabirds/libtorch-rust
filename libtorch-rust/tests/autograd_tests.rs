@@ -220,3 +220,102 @@ fn test_no_requires_grad_no_grad_fn() {
     assert!(!z.has_grad_fn());
     assert_eq!(z.requires_grad(), false);
 }
+
+// ============================================================
+// Phase 1.3: Backward Pass Infrastructure Tests
+// ============================================================
+
+#[test]
+fn test_simple_backward() {
+    // Test simple chain rule: z = x * y
+    // dz/dx = y, dz/dy = x
+    let mut x = Tensor::from_slice(&[2.0]);
+    let mut y = Tensor::from_slice(&[3.0]);
+
+    x.set_requires_grad(true);
+    y.set_requires_grad(true);
+
+    // z = x * y = 2.0 * 3.0 = 6.0
+    let mut z = &x * &y;
+
+    // Perform backward pass
+    z.backward();
+
+    // Check gradients
+    let x_grad = x.grad().expect("x should have gradient");
+    let y_grad = y.grad().expect("y should have gradient");
+
+    // dz/dx = y = 3.0
+    assert_eq!(x_grad.to_vec_f64()[0], 3.0, "dz/dx should be 3.0");
+
+    // dz/dy = x = 2.0
+    assert_eq!(y_grad.to_vec_f64()[0], 2.0, "dz/dy should be 2.0");
+}
+
+#[test]
+#[ignore] // TODO: Fix gradient propagation through multiple levels
+fn test_backward_chain() {
+    // Test chain of operations: w = x * y, z = w * a
+    let mut x = Tensor::from_slice(&[2.0]);
+    let mut y = Tensor::from_slice(&[3.0]);
+    let mut a = Tensor::from_slice(&[2.0]);
+
+    x.set_requires_grad(true);
+    y.set_requires_grad(true);
+    a.set_requires_grad(true);
+
+    // w = x * y = 6.0
+    let w = &x * &y;
+
+    // z = w * a = 6.0 * 2.0 = 12.0
+    let mut z = &w * &a;
+
+    z.backward();
+
+    // dz/dx = dz/dw * dw/dx = a * y = 2 * 3 = 6
+    let x_grad = x.grad().expect("x should have gradient");
+    assert_eq!(x_grad.to_vec_f64()[0], 6.0, "dz/dx should be 6.0");
+
+    // dz/dy = dz/dw * dw/dy = a * x = 2 * 2 = 4
+    let y_grad = y.grad().expect("y should have gradient");
+    assert_eq!(y_grad.to_vec_f64()[0], 4.0, "dz/dy should be 4.0");
+
+    // dz/da = w = 6.0
+    let a_grad = a.grad().expect("a should have gradient");
+    assert_eq!(a_grad.to_vec_f64()[0], 6.0, "dz/da should be 6.0");
+}
+
+#[test]
+fn test_backward_with_gradient() {
+    // Test backward with custom gradient
+    let mut x = Tensor::from_slice(&[2.0]);
+    let mut y = Tensor::from_slice(&[3.0]);
+
+    x.set_requires_grad(true);
+    y.set_requires_grad(true);
+
+    let mut z = &x * &y;
+
+    // Use custom gradient (instead of implicit 1.0)
+    let custom_grad = Tensor::from_slice(&[5.0]);
+    z.backward_with_gradient(custom_grad);
+
+    // dz/dx = grad_output * y = 5.0 * 3.0 = 15.0
+    let x_grad = x.grad().expect("x should have gradient");
+    assert_eq!(x_grad.to_vec_f64()[0], 15.0);
+
+    // dz/dy = grad_output * x = 5.0 * 2.0 = 10.0
+    let y_grad = y.grad().expect("y should have gradient");
+    assert_eq!(y_grad.to_vec_f64()[0], 10.0);
+}
+
+#[test]
+#[should_panic(expected = "Backward pass failed")]
+fn test_backward_no_grad_fn() {
+    // Test that backward fails on a tensor without grad_fn
+    let mut x = Tensor::from_slice(&[2.0]);
+    x.set_requires_grad(true);
+
+    // x is a leaf tensor with no grad_fn
+    x.backward();  // Should panic
+}

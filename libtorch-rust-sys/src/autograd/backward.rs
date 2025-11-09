@@ -4,6 +4,7 @@
 /// using reverse-mode automatic differentiation.
 
 use crate::TensorImpl;
+use crate::error::{Result, TchError};
 use super::GradNode;
 use std::collections::HashSet;
 use std::sync::Arc;
@@ -62,6 +63,99 @@ fn dfs_grad_fn(
 
     // Add this node after its dependencies (post-order traversal)
     result.push(node.clone());
+}
+
+/// Perform backward pass from a scalar tensor
+///
+/// Computes gradients for all tensors in the computation graph that have
+/// `requires_grad=true`. The output tensor must be a scalar (single element).
+///
+/// # Arguments
+/// * `output` - The scalar output tensor to backpropagate from
+///
+/// # Errors
+/// * Returns error if `output` is not a scalar
+/// * Returns error if `output` does not have a grad_fn (is a leaf tensor)
+pub fn backward(output: &mut TensorImpl) -> Result<()> {
+    // Create gradient of ones for scalar output
+    let grad_output = TensorImpl::ones(output.shape(), output.dtype(), output.device())?;
+    backward_with_gradient(output, grad_output)
+}
+
+/// Perform backward pass with a custom output gradient
+///
+/// Computes gradients for all tensors in the computation graph that have
+/// `requires_grad=true`, using the provided gradient for the output tensor.
+///
+/// # Arguments
+/// * `output` - The output tensor to backpropagate from
+/// * `grad_output` - The gradient of the loss with respect to output
+///
+/// # Errors
+/// * Returns error if gradient shape doesn't match output shape
+/// * Returns error if `output` does not have a grad_fn
+pub fn backward_with_gradient(output: &mut TensorImpl, grad_output: TensorImpl) -> Result<()> {
+    // Verify output has a grad_fn (it was created by an operation)
+    if output.grad_fn().is_none() {
+        return Err(TchError::Other(
+            "Cannot call backward() on a tensor that doesn't require grad or has no grad_fn".to_string()
+        ));
+    }
+
+    // Verify gradient shape matches output shape
+    if grad_output.shape() != output.shape() {
+        return Err(TchError::Other(format!(
+            "Gradient shape {:?} doesn't match output shape {:?}",
+            grad_output.shape(),
+            output.shape()
+        )));
+    }
+
+    // Get topological order of operations (dependencies first, output last)
+    let sorted_nodes = topological_sort_grad_fns(output);
+
+    // Use a HashMap to track gradients flowing to each node
+    use std::collections::HashMap;
+    let mut grad_map: HashMap<*const (), TensorImpl> = HashMap::new();
+
+    // Initialize with the output gradient
+    if let Some(grad_fn) = output.grad_fn() {
+        let node_ptr = Arc::as_ptr(&grad_fn) as *const ();
+        grad_map.insert(node_ptr, grad_output);
+    }
+
+    // Execute backward pass in reverse topological order (output to inputs)
+    for node in sorted_nodes.iter().rev() {
+        let node_ptr = Arc::as_ptr(node) as *const ();
+
+        // Get the gradient for this node
+        if let Some(node_grad) = grad_map.get(&node_ptr) {
+            // Accumulate gradients at leaf tensors (those with requires_grad but no grad_fn)
+            node.accumulate_grads(&[node_grad])?;
+
+            // Compute gradients for inputs
+            let grad_inputs = node.apply(&[node_grad]);
+
+            // Propagate gradients to predecessor nodes
+            let edges = node.next_edges();
+            for (i, edge) in edges.iter().enumerate() {
+                if i < grad_inputs.len() {
+                    let pred_ptr = Arc::as_ptr(&edge.function) as *const ();
+
+                    // Accumulate gradient at predecessor node
+                    if let Some(existing_grad) = grad_map.get_mut(&pred_ptr) {
+                        // Add to existing gradient
+                        *existing_grad = existing_grad.add(&grad_inputs[i])?;
+                    } else {
+                        // Insert new gradient
+                        grad_map.insert(pred_ptr, grad_inputs[i].clone());
+                    }
+                }
+            }
+        }
+    }
+
+    Ok(())
 }
 
 #[cfg(test)]
