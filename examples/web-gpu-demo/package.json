@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "predev": "bun run scripts/download-model.ts",
-    "dev": "bun --bun run index.html",
+    "dev": "bun run dev-server.ts",
     "serve": "python3 -m http.server 8000",
     "download-model": "bun run scripts/download-model.ts"
   },

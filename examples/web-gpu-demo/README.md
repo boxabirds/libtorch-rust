@@ -52,7 +52,7 @@ bun install
 bun run dev
 ```
 
-This will start Bun's built-in server and open your browser automatically.
+This will start the dev server at http://localhost:3000.
 
 ### Alternative: Simple HTTP Server
 
@@ -66,11 +66,11 @@ bun run serve
 
 Then navigate to `http://localhost:8000`
 
-## Training Accurate MNIST Model
+## Training MNIST Model
 
-By default, the demo uses **synthetic (random) weights** which won't give accurate predictions. To get a trained model:
+The MNIST demo requires trained model weights. To train a model:
 
-### Option 1: Train Your Own (Recommended)
+### Train Your Own (Required)
 
 ```bash
 # Install PyTorch
@@ -84,14 +84,6 @@ This will:
 - Train a 784→128→10 MLP on MNIST
 - Export weights to `public/models/mnist-mlp.json`
 - Achieve ~97-98% test accuracy
-
-### Option 2: Download Pre-trained Weights
-
-If someone has shared trained weights:
-```bash
-# Download and place in public/models/mnist-mlp.json
-curl -o public/models/mnist-mlp.json <URL>
-```
 
 ### Weight File Format
 
