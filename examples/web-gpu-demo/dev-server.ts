@@ -31,8 +31,17 @@ Bun.serve({
       filePath = '/index.html';
     }
 
-    // Serve from dist/public for /models, /public paths
-    if (filePath.startsWith('/models/') || filePath.startsWith('/public/')) {
+    // Map /models/ to dist/public/models/
+    if (filePath.startsWith('/models/')) {
+      const distPath = `./dist/public${filePath}`;
+      const file = Bun.file(distPath);
+      if (await file.exists()) {
+        return new Response(file);
+      }
+    }
+
+    // Serve from dist/public for /public paths
+    if (filePath.startsWith('/public/')) {
       const distPath = `./dist${filePath}`;
       const file = Bun.file(distPath);
       if (await file.exists()) {
