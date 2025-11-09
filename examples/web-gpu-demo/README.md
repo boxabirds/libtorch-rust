@@ -94,6 +94,37 @@ This will:
 - Export weights to `public/models/mnist-mlp.json`
 - Achieve ~97-98% test accuracy
 
+## Downloading MNIST Dataset for Browser Training
+
+To enable browser-based training (using the `libtorch-wasm-trainer`), you need the MNIST dataset:
+
+```bash
+# Download and process MNIST dataset
+bun run download-mnist
+```
+
+This will:
+- Download raw MNIST data from Yann LeCun's website
+- Convert to browser-friendly JSON format
+- Create multiple versions optimized for different use cases:
+  - `train-subset.json` - 1,000 samples for quick demos (~2.5 MB)
+  - `train-batched.json` - 60,000 samples in batches of 32 (~140 MB, recommended)
+  - `test-batched.json` - 10,000 test samples in batches of 100 (~23 MB)
+  - `train-full.json` - Full dataset as single JSON (large, ~140 MB)
+  - `test-full.json` - Full test set as single JSON (~23 MB)
+
+**Recommendation**: Use `train-batched.json` for browser training as it's optimized for batch processing.
+
+### One-Command Setup
+
+To download both the MNIST dataset and train a PyTorch model:
+
+```bash
+bun run setup
+```
+
+This runs both `download-mnist` and `download-model` scripts.
+
 ### Weight File Format
 
 ```json
