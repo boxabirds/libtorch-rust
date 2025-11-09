@@ -3,13 +3,13 @@ mod trainer;
 
 use burn::backend::ndarray::{NdArray, NdArrayDevice};
 use burn::backend::Autodiff;
-use trainer::{MnistTrainer, PyTorchWeights, TrainingConfig};
+use trainer::{MnistTrainer, TrainingConfig};
 use wasm_bindgen::prelude::*;
 
 // Use NdArray backend with autodiff for WASM
-// Note: We're using NdArray instead of WGPU initially to get it working
+// Note: Using NdArray (CPU) initially to get it working
 // TODO: Switch to WGPU backend once we solve WASM + WebGPU integration
-type WasmBackend = Autodiff<NdArray<f32>>;
+type WasmBackend = Autodiff<NdArray>;
 
 /// Initialize panic hook for better error messages in browser
 #[wasm_bindgen(start)]

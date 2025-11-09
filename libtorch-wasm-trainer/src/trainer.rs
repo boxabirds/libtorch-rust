@@ -1,6 +1,8 @@
-use burn::optim::{Adam, AdamConfig, Optimizer};
+use burn::module::AutodiffModule;
+use burn::nn::loss::CrossEntropyLossConfig;
+use burn::optim::{AdamConfig, SimpleOptimizer};
 use burn::tensor::backend::AutodiffBackend;
-use burn::tensor::{Data, Tensor};
+use burn::tensor::{activation, ElementConversion, Int, Tensor};
 use serde::{Deserialize, Serialize};
 use wasm_bindgen::prelude::*;
 
@@ -44,9 +46,9 @@ impl Default for TrainingConfig {
 }
 
 /// MNIST Trainer for browser-based training
-pub struct MnistTrainer<B: AutodiffBackend> {
+pub struct MnistTrainer<B: AutodiffBackend, O = burn::optim::OptimizerAdaptor<burn::optim::Adam, MnistMLP<B>, B>> {
     model: MnistMLP<B>,
-    optim: Adam<B::InnerBackend>,
+    optim: O,
     config: TrainingConfig,
     device: B::Device,
 }
@@ -55,10 +57,7 @@ impl<B: AutodiffBackend> MnistTrainer<B> {
     /// Create a new trainer
     pub fn new(config: TrainingConfig, device: B::Device) -> Self {
         let model = MnistMLP::new(&device);
-
-        let optim = AdamConfig::new()
-            .with_weight_decay(Some(burn::optim::decay::WeightDecayConfig::new(5e-5)))
-            .init();
+        let optim = AdamConfig::new().init();
 
         Self {
             model,
@@ -79,49 +78,28 @@ impl<B: AutodiffBackend> MnistTrainer<B> {
         let images_tensor = Tensor::<B, 1>::from_floats(images, &self.device)
             .reshape([batch_size, 784]);
 
-        // Forward pass
-        let output = self.model.forward(images_tensor);
+        // Convert labels to tensor
+        let labels_i64: Vec<i64> = labels.iter().map(|&l| l as i64).collect();
+        let labels_tensor = Tensor::<B, 1, Int>::from_ints(labels_i64.as_slice(), &self.device);
 
-        // Compute cross-entropy loss
-        let loss = self.cross_entropy_loss(output.clone(), labels);
+        // Forward pass
+        let logits = self.model.forward(images_tensor);
+
+        // Compute cross-entropy loss using Burn's built-in loss
+        let loss_fn = CrossEntropyLossConfig::new().init(&self.device);
+        let loss = loss_fn.forward(logits, labels_tensor);
 
         // Backward pass
         let grads = loss.backward();
 
+        // Extract gradients for the model using the trait method
+        let model_grads = self.model.grad(&grads);
+
         // Update weights
-        let grads = burn::module::AutodiffModule::grad(&self.model, &grads);
-        self.model = self.optim.step(self.config.learning_rate, self.model, grads);
+        self.model = self.optim.step(self.config.learning_rate, self.model, model_grads);
 
-        // Return loss value
-        loss.into_scalar()
-    }
-
-    /// Compute cross-entropy loss
-    fn cross_entropy_loss(&self, logits: Tensor<B, 2>, labels: &[usize]) -> Tensor<B, 1> {
-        let batch_size = labels.len();
-
-        // Convert labels to tensor
-        let labels_data: Vec<i64> = labels.iter().map(|&l| l as i64).collect();
-        let labels_tensor = Tensor::<B, 1, burn::tensor::Int>::from_ints(
-            labels_data.as_slice(),
-            &self.device,
-        );
-
-        // Compute log softmax
-        let log_probs = logits.log_softmax(1);
-
-        // Negative log likelihood
-        let mut total_loss = 0.0;
-        let log_probs_data = log_probs.into_data();
-
-        for i in 0..batch_size {
-            let label = labels[i];
-            let log_prob = log_probs_data.value[i * 10 + label];
-            total_loss -= log_prob;
-        }
-
-        let loss = total_loss / batch_size as f32;
-        Tensor::from_floats([loss], &self.device)
+        // Return loss value (convert to f32 using ElementConversion)
+        loss.into_scalar().elem()
     }
 
     /// Evaluate on a batch (no gradient tracking)
@@ -133,67 +111,55 @@ impl<B: AutodiffBackend> MnistTrainer<B> {
             .reshape([batch_size, 784]);
 
         // Forward pass (no gradients)
-        let output = self.model.valid().forward(images_tensor);
+        let logits = self.model.valid().forward(images_tensor);
 
         // Compute accuracy
-        let predictions = output.clone().argmax(1);
+        let predictions = logits.clone().argmax(1);
         let predictions_data = predictions.into_data();
 
         let mut correct = 0;
         for i in 0..batch_size {
-            if predictions_data.value[i] == labels[i] as i64 {
+            if predictions_data.as_slice::<i64>().unwrap()[i] == labels[i] as i64 {
                 correct += 1;
             }
         }
         let accuracy = correct as f32 / batch_size as f32;
 
-        // Compute loss
-        let loss = self.cross_entropy_loss_no_grad(output, labels);
-
-        (loss, accuracy)
-    }
-
-    /// Cross-entropy loss without gradient tracking
-    fn cross_entropy_loss_no_grad(
-        &self,
-        logits: Tensor<B::InnerBackend, 2>,
-        labels: &[usize],
-    ) -> f32 {
-        let batch_size = labels.len();
-        let log_probs = logits.log_softmax(1);
+        // Compute loss using log_softmax function
+        let log_probs = activation::log_softmax(logits, 1);
         let log_probs_data = log_probs.into_data();
 
         let mut total_loss = 0.0;
         for i in 0..batch_size {
             let label = labels[i];
-            let log_prob = log_probs_data.value[i * 10 + label];
+            let log_prob = log_probs_data.as_slice::<f32>().unwrap()[i * 10 + label];
             total_loss -= log_prob;
         }
+        let loss = total_loss / batch_size as f32;
 
-        total_loss / batch_size as f32
+        (loss, accuracy)
     }
 
     /// Export weights in PyTorch-compatible format
     pub fn export_weights(&self) -> PyTorchWeights {
-        // Get fc1 weights [128, 784]
-        let fc1_weight_tensor = self.model.fc1.weight.val();
-        let fc1_weight_data: Data<f32, 2> = fc1_weight_tensor.into_data();
-        let fc1_weight: Vec<f32> = fc1_weight_data.value;
+        // Get model in eval mode for weight extraction
+        let model_valid = self.model.valid();
 
-        // Get fc1 bias [128]
-        let fc1_bias_tensor = self.model.fc1.bias.as_ref().unwrap().val();
-        let fc1_bias_data: Data<f32, 1> = fc1_bias_tensor.into_data();
-        let fc1_bias: Vec<f32> = fc1_bias_data.value;
+        // Extract fc1 weights [128, 784]
+        let fc1_weight_data = model_valid.fc1.weight.to_data();
+        let fc1_weight: Vec<f32> = fc1_weight_data.to_vec().unwrap();
 
-        // Get fc2 weights [10, 128]
-        let fc2_weight_tensor = self.model.fc2.weight.val();
-        let fc2_weight_data: Data<f32, 2> = fc2_weight_tensor.into_data();
-        let fc2_weight: Vec<f32> = fc2_weight_data.value;
+        // Extract fc1 bias [128]
+        let fc1_bias_data = model_valid.fc1.bias.as_ref().unwrap().to_data();
+        let fc1_bias: Vec<f32> = fc1_bias_data.to_vec().unwrap();
 
-        // Get fc2 bias [10]
-        let fc2_bias_tensor = self.model.fc2.bias.as_ref().unwrap().val();
-        let fc2_bias_data: Data<f32, 1> = fc2_bias_tensor.into_data();
-        let fc2_bias: Vec<f32> = fc2_bias_data.value;
+        // Extract fc2 weights [10, 128]
+        let fc2_weight_data = model_valid.fc2.weight.to_data();
+        let fc2_weight: Vec<f32> = fc2_weight_data.to_vec().unwrap();
+
+        // Extract fc2 bias [10]
+        let fc2_bias_data = model_valid.fc2.bias.as_ref().unwrap().to_data();
+        let fc2_bias: Vec<f32> = fc2_bias_data.to_vec().unwrap();
 
         PyTorchWeights {
             fc1_weight,
@@ -210,7 +176,7 @@ mod tests {
     use burn::backend::ndarray::{NdArray, NdArrayDevice};
     use burn::backend::Autodiff;
 
-    type TestBackend = Autodiff<NdArray<f32>>;
+    type TestBackend = Autodiff<NdArray>;
 
     #[test]
     fn test_trainer_creation() {
@@ -231,5 +197,35 @@ mod tests {
 
         let loss = trainer.train_batch(&images, &labels);
         assert!(loss > 0.0);
+    }
+
+    #[test]
+    fn test_eval_batch() {
+        let device = NdArrayDevice::Cpu;
+        let config = TrainingConfig::default();
+        let trainer: MnistTrainer<TestBackend> = MnistTrainer::new(config, device);
+
+        // Dummy batch
+        let images = vec![0.0; 8 * 784];
+        let labels = vec![0; 8];
+
+        let (loss, accuracy) = trainer.eval_batch(&images, &labels);
+        assert!(loss > 0.0);
+        assert!(accuracy >= 0.0 && accuracy <= 1.0);
+    }
+
+    #[test]
+    fn test_export_weights() {
+        let device = NdArrayDevice::Cpu;
+        let config = TrainingConfig::default();
+        let trainer: MnistTrainer<TestBackend> = MnistTrainer::new(config, device);
+
+        let weights = trainer.export_weights();
+
+        // Check weight shapes
+        assert_eq!(weights.fc1_weight.len(), 128 * 784);
+        assert_eq!(weights.fc1_bias.len(), 128);
+        assert_eq!(weights.fc2_weight.len(), 10 * 128);
+        assert_eq!(weights.fc2_bias.len(), 10);
     }
 }

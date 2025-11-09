@@ -34,7 +34,7 @@ impl<B: Backend> MnistMLP<B> {
 
     /// Forward pass with classification
     /// Returns class predictions (argmax)
-    pub fn predict(&self, input: Tensor<B, 2>) -> Tensor<B, 1, burn::tensor::Int> {
+    pub fn predict(&self, input: Tensor<B, 2>) -> Tensor<B, 2, burn::tensor::Int> {
         let logits = self.forward(input);
         logits.argmax(1)
     }
