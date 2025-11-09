@@ -24,7 +24,9 @@ export default function App() {
   const [activeTab, setActiveTab] = useState<Tab>('benchmarks');
 
   useEffect(() => {
-    setSupported(isWebGPUSupported());
+    const supported = isWebGPUSupported();
+    console.log('🔍 WebGPU Support Check:', supported ? '✅ Supported' : '❌ Not Supported');
+    setSupported(supported);
   }, []);
 
   const updateResult = (name: string, update: Partial<DemoResult>) => {
@@ -50,10 +52,16 @@ export default function App() {
   };
 
   const handleInitialize = async () => {
+    console.log('🚀 Initializing WebGPU...');
     try {
       const info = await initializeGPU();
+      console.log('✅ WebGPU initialized successfully!');
+      console.log('   Vendor:', info.info.vendor);
+      console.log('   Device:', info.info.device);
+      console.log('   Architecture:', info.info.architecture);
       setGpuInfo(info);
     } catch (err: any) {
+      console.error('❌ WebGPU initialization failed:', err.message);
       setError(err.message);
     }
   };
