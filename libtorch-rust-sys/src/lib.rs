@@ -5,6 +5,9 @@ pub mod scalar;
 pub mod storage;
 pub mod tensor;
 
+// Autograd for automatic differentiation
+pub mod autograd;
+
 // GPU backend (WebGPU)
 pub mod gpu;
 

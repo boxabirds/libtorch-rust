@@ -374,6 +374,42 @@ impl Tensor {
             println!("  data: {:?}", self.to_vec_f64());
         }
     }
+
+    // ============================================================
+    // Autograd methods
+    // ============================================================
+
+    /// Set whether this tensor requires gradient computation
+    pub fn set_requires_grad(&mut self, requires_grad: bool) {
+        self.inner.set_requires_grad(requires_grad);
+    }
+
+    /// Check if this tensor requires gradient computation
+    pub fn requires_grad(&self) -> bool {
+        self.inner.requires_grad()
+    }
+
+    /// Get the gradient of this tensor (if it exists)
+    pub fn grad(&self) -> Option<Tensor> {
+        self.inner.grad().map(|grad_impl| Tensor {
+            inner: grad_impl.clone(),
+        })
+    }
+
+    /// Set the gradient of this tensor
+    pub fn set_grad(&mut self, gradient: Tensor) {
+        self.inner.set_grad(gradient.inner);
+    }
+
+    /// Clear the gradient of this tensor
+    pub fn zero_grad(&mut self) {
+        self.inner.zero_grad();
+    }
+
+    /// Accumulate gradient (add new_grad to existing gradient)
+    pub fn accumulate_grad(&mut self, new_grad: Tensor) -> crate::Result<()> {
+        self.inner.accumulate_grad(new_grad.inner)
+    }
 }
 
 // Operator overloading
