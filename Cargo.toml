@@ -36,7 +36,7 @@ rand = "0.8"
 rand_distr = "0.4"
 
 # WebGPU support
-wgpu = "0.19"
+wgpu = "27.0"
 bytemuck = { version = "1.14", features = ["derive"] }
 pollster = "0.3"
 futures = "0.3"
