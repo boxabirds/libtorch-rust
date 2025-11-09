@@ -25,46 +25,62 @@ This plan details the implementation of GPU-accelerated training for libtorch-ru
 
 **Goal:** Build gradient tracking and computational graph infrastructure
 
-### 1.1 Gradient Tensor Storage
+### 1.1 Gradient Tensor Storage ✅ COMPLETE
 
 **Tests to Port:**
-- `test/cpp/api/autograd.cpp::AutogradTest.SimpleGrad`
-- `test/cpp/api/autograd.cpp::AutogradTest.GradientStorage`
+- ✅ `test/cpp/api/autograd.cpp::AutogradTest.SimpleGrad`
+- ✅ `test/cpp/api/autograd.cpp::AutogradTest.GradientStorage`
 
 **Implementation:**
-- [ ] `libtorch-rust-sys/src/autograd/tensor_grad.rs`
-  - Add `grad` field to TensorImpl
-  - Add `requires_grad` flag
-  - Implement `set_requires_grad()` and `requires_grad()`
-  - Add gradient accumulation logic
+- [x] `libtorch-rust-sys/src/tensor.rs` - Added gradient fields to TensorImpl
+  - [x] Add `grad` field to TensorImpl
+  - [x] Add `requires_grad` flag
+  - [x] Add `grad_fn` field for operation tracking
+  - [x] Implement `set_requires_grad()` and `requires_grad()`
+  - [x] Implement `grad()`, `set_grad()`, `zero_grad()`
+  - [x] Add gradient accumulation logic (`accumulate_grad()`)
+- [x] `libtorch-rust/tests/autograd_tests.rs` - Ported PyTorch tests
+  - [x] `test_grad_set_and_get`
+  - [x] `test_grad_accumulation`
+  - [x] `test_grad_zero`
+  - [x] `test_grad_shape_mismatch`
 
 **Validation:**
-- Tensor can store gradient
-- `requires_grad` flag propagates correctly
-- Gradients accumulate on repeated backward passes
+- ✅ Tensor can store gradient
+- ✅ `requires_grad` flag works correctly
+- ✅ Gradients accumulate on repeated calls
+- ✅ All 7 tests passing
 
-### 1.2 Computational Graph (Tape-based)
+### 1.2 Computational Graph (Tape-based) ✅ PARTIAL
 
 **Tests to Port:**
-- `test/cpp/api/autograd.cpp::AutogradTest.SimpleTape`
-- `test/cpp/api/autograd.cpp::AutogradTest.EdgeCases`
+- [ ] `test/cpp/api/autograd.cpp::AutogradTest.SimpleTape`
+- [ ] `test/cpp/api/autograd.cpp::AutogradTest.EdgeCases`
 
 **Implementation:**
-- [ ] `libtorch-rust-sys/src/autograd/tape.rs`
-  - Define `GradNode` trait for operations
-  - Define `Edge` struct connecting tensors to nodes
-  - Implement topological sort for backward traversal
-  - Thread-local tape storage (for gradient context)
+- [x] `libtorch-rust-sys/src/autograd/node.rs` - GradNode trait defined
+  - [x] Define `GradNode` trait for operations
+  - [x] `apply()` method for gradient computation
+  - [x] `next_edges()` method for graph traversal
 
-- [ ] `libtorch-rust-sys/src/autograd/context.rs`
-  - `GradMode::is_enabled()` - check if recording
-  - `NoGradGuard` - disable gradient tracking
-  - `set_grad_enabled(bool)` - global control
+- [x] `libtorch-rust-sys/src/autograd/edge.rs` - Edge struct
+  - [x] Define `Edge` struct connecting tensors to nodes
+  - [x] Stores gradient function and input number
+
+- [x] `libtorch-rust-sys/src/autograd/context.rs` - Gradient mode control
+  - [x] `is_grad_enabled()` - check if recording
+  - [x] `NoGradGuard` - disable gradient tracking
+  - [x] `set_grad_enabled(bool)` - global control
+  - [x] Thread-local GRAD_MODE storage
+
+- [ ] `libtorch-rust-sys/src/autograd/backward.rs` - Topological sort (TODO)
+  - [ ] Implement topological sort for backward traversal
 
 **Validation:**
-- Operations record edges when `requires_grad=true`
-- Topological sort produces correct backward order
-- `no_grad` context prevents recording
+- ✅ Gradient mode can be toggled
+- ✅ NoGradGuard works correctly (tested)
+- [ ] Operations record edges when `requires_grad=true` (not yet implemented)
+- [ ] Topological sort produces correct backward order
 
 ### 1.3 Backward Pass Infrastructure
 

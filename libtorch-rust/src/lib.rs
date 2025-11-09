@@ -14,6 +14,11 @@ pub mod jit;
 pub mod index;
 pub mod wrappers;
 
+/// Autograd functionality for automatic differentiation
+pub mod autograd {
+    pub use libtorch_rust_sys::autograd::{is_grad_enabled, set_grad_enabled, NoGradGuard, GradNode, Edge};
+}
+
 // Re-export commonly used types
 pub use device::Device;
 pub use kind::Kind;
@@ -23,49 +28,6 @@ use libtorch_rust_sys::TchError;
 
 /// Result type for tensor operations
 pub type Result<T> = std::result::Result<T, TchError>;
-
-/// No gradient guard - disables gradient tracking
-pub struct NoGradGuard {
-    _private: (),
-}
-
-impl NoGradGuard {
-    /// Create a new no-grad guard
-    pub fn new() -> Self {
-        // TODO: Implement gradient tracking disable
-        NoGradGuard { _private: () }
-    }
-}
-
-impl Default for NoGradGuard {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-impl Drop for NoGradGuard {
-    fn drop(&mut self) {
-        // TODO: Re-enable gradient tracking
-    }
-}
-
-/// Execute a closure without gradient tracking
-pub fn no_grad<F, R>(f: F) -> R
-where
-    F: FnOnce() -> R,
-{
-    let _guard = NoGradGuard::new();
-    f()
-}
-
-/// Execute a closure with gradient tracking enabled
-pub fn with_grad<F, R>(f: F) -> R
-where
-    F: FnOnce() -> R,
-{
-    // TODO: Implement gradient tracking
-    f()
-}
 
 /// Set the number of threads used for intra-op parallelism
 pub fn set_num_threads(n: i32) {

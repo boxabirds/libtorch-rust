@@ -3,7 +3,9 @@ use crate::dtype::DType;
 use crate::error::{Result, TchError};
 use crate::scalar::Scalar;
 use crate::storage::Storage;
+use crate::autograd::{Edge, GradNode};
 use std::ops::{Add, Div, Mul, Neg, Sub};
+use std::sync::Arc;
 
 /// Internal tensor implementation
 #[derive(Clone)]
@@ -14,6 +16,16 @@ pub struct TensorImpl {
     offset: usize,
     dtype: DType,
     device: Device,
+
+    // Autograd fields
+    /// Gradient of this tensor (accumulated during backward pass)
+    grad: Option<Box<TensorImpl>>,
+
+    /// Whether this tensor requires gradient computation
+    requires_grad: bool,
+
+    /// The gradient function that created this tensor (for backward pass)
+    grad_fn: Option<Arc<dyn GradNode>>,
 }
 
 impl TensorImpl {
@@ -30,6 +42,9 @@ impl TensorImpl {
             offset: 0,
             dtype,
             device,
+            grad: None,
+            requires_grad: false,
+            grad_fn: None,
         })
     }
 
@@ -67,6 +82,9 @@ impl TensorImpl {
             offset: 0,
             dtype: DType::Float,
             device: Device::Cpu,
+            grad: None,
+            requires_grad: false,
+            grad_fn: None,
         })
     }
 
@@ -92,6 +110,9 @@ impl TensorImpl {
             offset: 0,
             dtype: DType::Double,
             device: Device::Cpu,
+            grad: None,
+            requires_grad: false,
+            grad_fn: None,
         })
     }
 
@@ -117,6 +138,9 @@ impl TensorImpl {
             offset: 0,
             dtype: DType::Int64,
             device: Device::Cpu,
+            grad: None,
+            requires_grad: false,
+            grad_fn: None,
         })
     }
 
@@ -247,6 +271,9 @@ impl TensorImpl {
             offset: self.offset,
             dtype: self.dtype,
             device: self.device,
+            grad: None,
+            requires_grad: self.requires_grad,
+            grad_fn: None,  // TODO: Set grad_fn for unsqueeze operation
         })
     }
 
@@ -275,6 +302,9 @@ impl TensorImpl {
             offset: self.offset,
             dtype: self.dtype,
             device: self.device,
+            grad: None,
+            requires_grad: self.requires_grad,
+            grad_fn: None,  // TODO: Set grad_fn for squeeze operation
         }
     }
 
@@ -638,6 +668,87 @@ impl TensorImpl {
             _ => Err(TchError::TypeError(
                 "Unsupported dtype for matmul".to_string(),
             )),
+        }
+    }
+
+    // ============================================================
+    // Autograd methods (Phase 1.1.2)
+    // ============================================================
+
+    /// Set whether this tensor requires gradient computation
+    pub fn set_requires_grad(&mut self, requires_grad: bool) {
+        self.requires_grad = requires_grad;
+    }
+
+    /// Check if this tensor requires gradient computation
+    pub fn requires_grad(&self) -> bool {
+        self.requires_grad
+    }
+
+    /// Get the gradient of this tensor (if it exists)
+    pub fn grad(&self) -> Option<&TensorImpl> {
+        self.grad.as_ref().map(|boxed| boxed.as_ref())
+    }
+
+    /// Get a mutable reference to the gradient (if it exists)
+    pub fn grad_mut(&mut self) -> Option<&mut TensorImpl> {
+        self.grad.as_mut().map(|boxed| boxed.as_mut())
+    }
+
+    /// Set the gradient of this tensor
+    pub fn set_grad(&mut self, gradient: TensorImpl) {
+        self.grad = Some(Box::new(gradient));
+    }
+
+    /// Clear the gradient of this tensor
+    pub fn zero_grad(&mut self) {
+        self.grad = None;
+    }
+
+    /// Get the gradient function that created this tensor
+    pub fn grad_fn(&self) -> Option<&Arc<dyn GradNode>> {
+        self.grad_fn.as_ref()
+    }
+
+    /// Set the gradient function for this tensor
+    pub fn set_grad_fn(&mut self, grad_fn: Arc<dyn GradNode>) {
+        self.grad_fn = Some(grad_fn);
+    }
+
+    // ============================================================
+    // Gradient accumulation (Phase 1.1.3)
+    // ============================================================
+
+    /// Accumulate gradient (add new_grad to existing gradient)
+    ///
+    /// If no gradient exists yet, this becomes the first gradient.
+    /// Otherwise, the new gradient is added to the existing one.
+    ///
+    /// # Arguments
+    /// * `new_grad` - The gradient to accumulate
+    ///
+    /// # Returns
+    /// Ok(()) on success, or an error if shapes don't match
+    pub fn accumulate_grad(&mut self, new_grad: TensorImpl) -> Result<()> {
+        if self.shape != new_grad.shape {
+            return Err(TchError::ShapeError(format!(
+                "Gradient shape {:?} doesn't match tensor shape {:?}",
+                new_grad.shape, self.shape
+            )));
+        }
+
+        match &mut self.grad {
+            None => {
+                // First gradient - just store it
+                self.grad = Some(Box::new(new_grad));
+                Ok(())
+            }
+            Some(existing_grad) => {
+                // Accumulate by adding
+                let accumulated = existing_grad.add(&new_grad)?;
+                **existing_grad = accumulated;
+                Ok(())
+            }
         }
     }
 }
