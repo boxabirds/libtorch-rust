@@ -40,6 +40,24 @@ Bun.serve({
       }
     }
 
+    // Map /wasm/ to dist/public/wasm/
+    if (filePath.startsWith('/wasm/')) {
+      const distPath = `./dist/public${filePath}`;
+      const file = Bun.file(distPath);
+      if (await file.exists()) {
+        return new Response(file);
+      }
+    }
+
+    // Map /data/ to dist/public/data/
+    if (filePath.startsWith('/data/')) {
+      const distPath = `./dist/public${filePath}`;
+      const file = Bun.file(distPath);
+      if (await file.exists()) {
+        return new Response(file);
+      }
+    }
+
     // Serve from dist/public for /public paths
     if (filePath.startsWith('/public/')) {
       const distPath = `./dist${filePath}`;
