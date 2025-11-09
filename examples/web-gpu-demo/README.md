@@ -66,6 +66,46 @@ bun run serve
 
 Then navigate to `http://localhost:8000`
 
+## Training Accurate MNIST Model
+
+By default, the demo uses **synthetic (random) weights** which won't give accurate predictions. To get a trained model:
+
+### Option 1: Train Your Own (Recommended)
+
+```bash
+# Install PyTorch
+pip install torch torchvision
+
+# Train the model (~2-3 minutes)
+python scripts/train_mnist.py
+```
+
+This will:
+- Train a 784→128→10 MLP on MNIST
+- Export weights to `public/models/mnist-mlp.json`
+- Achieve ~97-98% test accuracy
+
+### Option 2: Download Pre-trained Weights
+
+If someone has shared trained weights:
+```bash
+# Download and place in public/models/mnist-mlp.json
+curl -o public/models/mnist-mlp.json <URL>
+```
+
+### Weight File Format
+
+```json
+{
+  "weights": {
+    "fc1_weight": [...],  // 128×784 flat array
+    "fc1_bias": [...],    // 128 array
+    "fc2_weight": [...],  // 10×128 flat array
+    "fc2_bias": [...]     // 10 array
+  }
+}
+```
+
 ## Browser Compatibility
 
 ### ✅ Fully Supported
