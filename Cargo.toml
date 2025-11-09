@@ -1,7 +1,7 @@
 [workspace]
 members = [
     "libtorch-rust",
-    "libtorch-rust-sys",
+    "libtorch-rust-sys", "libtorch-wasm-trainer",
 ]
 resolver = "2"
 

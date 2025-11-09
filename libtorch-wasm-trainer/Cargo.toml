@@ -1,0 +1,45 @@
+[package]
+name = "libtorch-wasm-trainer"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+# Burn framework with NdArray backend for WASM
+# Note: Using NdArray backend initially (CPU), will add WGPU later
+burn = { version = "0.19", default-features = false, features = ["ndarray", "train"] }
+burn-ndarray = { version = "0.19" }
+
+# Required for WASM random number generation
+getrandom = { version = "0.2", features = ["js"] }
+
+# WASM bindings
+wasm-bindgen = "0.2"
+wasm-bindgen-futures = "0.4"
+js-sys = "0.3"
+
+# Web APIs
+web-sys = { version = "0.3", features = ["console", "Window", "Document", "Navigator"] }
+
+# Serialization for weight export
+serde = { workspace = true }
+serde_json = { workspace = true }
+
+# Error handling
+thiserror = { workspace = true }
+
+# Optional: For debugging in browser
+console_error_panic_hook = "0.1"
+
+[dev-dependencies]
+wasm-bindgen-test = "0.3"
+
+[profile.release]
+opt-level = "z"  # Optimize for size
+lto = true
+codegen-units = 1
