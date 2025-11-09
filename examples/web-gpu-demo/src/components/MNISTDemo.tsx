@@ -17,8 +17,24 @@ export default function MNISTDemo({ gpuInfo }: MNISTDemoProps) {
   useEffect(() => {
     async function initModel() {
       try {
+        console.log('🧠 Loading MNIST Model...');
         // Load model weights (currently using synthetic weights for demo)
         const weights = await loadMNISTWeights();
+
+        // Log weight statistics
+        const getStats = (arr: Float32Array, name: string) => {
+          const min = Math.min(...Array.from(arr));
+          const max = Math.max(...Array.from(arr));
+          const mean = Array.from(arr).reduce((a, b) => a + b, 0) / arr.length;
+          console.log(`   ${name}: shape=[${arr.length}], range=[${min.toFixed(3)}, ${max.toFixed(3)}], mean=${mean.toFixed(3)}`);
+        };
+
+        getStats(weights.fc1_weight, 'fc1_weight');
+        getStats(weights.fc1_bias, 'fc1_bias');
+        getStats(weights.fc2_weight, 'fc2_weight');
+        getStats(weights.fc2_bias, 'fc2_bias');
+        console.log('');
+
         const mnistModel = new MNISTModel(gpuInfo.device, weights);
         setModel(mnistModel);
         setLoading(false);
