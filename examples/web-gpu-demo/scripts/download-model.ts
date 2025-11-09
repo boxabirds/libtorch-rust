@@ -70,37 +70,24 @@ async function downloadModel() {
     return;
   }
 
-  console.log('📥 Downloading MNIST model weights...');
-
-  try {
-    // Try to download from HuggingFace
-    console.log('   Attempting to download from HuggingFace...');
-    const response = await fetch(MODEL_URL);
-
-    if (response.ok) {
-      const weights = await response.json();
-
-      // Ensure directory exists
-      if (!existsSync(MODELS_DIR)) {
-        mkdirSync(MODELS_DIR, { recursive: true });
-      }
-
-      // Save weights
-      writeFileSync(MODEL_PATH, JSON.stringify(weights, null, 2));
-      console.log('✅ Model weights downloaded from HuggingFace');
-      console.log('   Saved to:', MODEL_PATH);
-      return;
-    }
-
-    // If HuggingFace fails, fall through to synthetic weights
-    console.log('⚠️  HuggingFace download failed (status: ' + response.status + ')');
-
-  } catch (error) {
-    console.log('⚠️  Download failed:', (error as Error).message);
-  }
-
-  // Fallback: Create synthetic weights
-  createSyntheticWeights();
+  console.log('📥 Checking for MNIST model weights...');
+  console.log('');
+  console.log('⚠️  Model weights not found!');
+  console.log('');
+  console.log('To use the MNIST demo, you need to train a model:');
+  console.log('');
+  console.log('  1. Install PyTorch:');
+  console.log('     pip install torch torchvision');
+  console.log('');
+  console.log('  2. Train the model (~2-3 minutes):');
+  console.log('     python scripts/train_mnist.py');
+  console.log('');
+  console.log('  3. Restart the dev server:');
+  console.log('     bun run dev');
+  console.log('');
+  console.log('The demo will continue without model weights.');
+  console.log('MNIST demo will show an error until you train the model.');
+  console.log('');
 }
 
 // Run the download

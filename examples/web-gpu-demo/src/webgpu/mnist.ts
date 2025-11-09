@@ -144,47 +144,30 @@ export class MNISTModel {
 export async function loadMNISTWeights(url?: string): Promise<ModelWeights> {
   const modelUrl = url || '/models/mnist-mlp.json';
 
-  try {
-    // Try to load from file/URL
-    const response = await fetch(modelUrl);
+  const response = await fetch(modelUrl);
 
-    if (!response.ok) {
-      throw new Error(`Failed to load model: ${response.statusText}`);
-    }
-
-    const data = await response.json();
-
-    // Handle different weight formats
-    const weights = data.weights || data;
-
-    return {
-      fc1_weight: new Float32Array(weights.fc1_weight),
-      fc1_bias: new Float32Array(weights.fc1_bias),
-      fc2_weight: new Float32Array(weights.fc2_weight),
-      fc2_bias: new Float32Array(weights.fc2_bias),
-    };
-  } catch (error) {
-    console.warn('Could not load model weights, using synthetic weights:', error);
-
-    // Fallback: Create synthetic weights (Xavier initialization)
-    const createWeight = (rows: number, cols: number) => {
-      const scale = Math.sqrt(2.0 / (rows + cols));
-      const weights = new Float32Array(rows * cols);
-      for (let i = 0; i < weights.length; i++) {
-        weights[i] = (Math.random() * 2 - 1) * scale;
-      }
-      return weights;
-    };
-
-    const createBias = (size: number) => {
-      return new Float32Array(size); // Initialize to zero
-    };
-
-    return {
-      fc1_weight: createWeight(128, 784),
-      fc1_bias: createBias(128),
-      fc2_weight: createWeight(10, 128),
-      fc2_bias: createBias(10),
-    };
+  if (!response.ok) {
+    throw new Error(
+      `❌ Model weights not found at ${modelUrl}\n\n` +
+      `To use the MNIST demo, you need to train a model first:\n\n` +
+      `1. cd examples/web-gpu-demo\n` +
+      `2. pip install torch torchvision\n` +
+      `3. python scripts/train_mnist.py\n\n` +
+      `This trains a model in ~2-3 minutes and exports weights to public/models/mnist-mlp.json`
+    );
   }
+
+  const data = await response.json();
+
+  // Handle different weight formats
+  const weights = data.weights || data;
+
+  console.log('✅ Loaded trained model weights');
+
+  return {
+    fc1_weight: new Float32Array(weights.fc1_weight),
+    fc1_bias: new Float32Array(weights.fc1_bias),
+    fc2_weight: new Float32Array(weights.fc2_weight),
+    fc2_bias: new Float32Array(weights.fc2_bias),
+  };
 }
