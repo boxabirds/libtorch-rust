@@ -8,10 +8,11 @@
  * 4. Generates both full dataset and a smaller subset for quick demos
  */
 
-import { writeFileSync, existsSync, mkdirSync } from 'fs';
-import { join } from 'path';
+import { writeFileSync, existsSync, mkdirSync, statSync, readFileSync } from 'fs';
+import { join, dirname } from 'path';
 import { gunzip } from 'zlib';
 import { promisify } from 'util';
+import { fileURLToPath } from 'url';
 
 const gunzipAsync = promisify(gunzip);
 
@@ -23,7 +24,10 @@ const MNIST_MIRRORS = [
   'https://storage.googleapis.com/cvdf-datasets/mnist/',
 ];
 
-const DATA_DIR = join(import.meta.dir, '..', 'public', 'data');
+// Node.js compatible path resolution
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+const DATA_DIR = join(__dirname, '..', 'public', 'data');
 const MNIST_DIR = join(DATA_DIR, 'mnist');
 
 interface MNISTFile {
@@ -156,7 +160,7 @@ function createDatasetJSON(
   }
 
   writeFileSync(outputPath, JSON.stringify(dataset, null, 2));
-  const sizeKB = (require('fs').statSync(outputPath).size / 1024).toFixed(1);
+  const sizeKB = (statSync(outputPath).size / 1024).toFixed(1);
   console.log(`   ✅ Saved ${numSamples} samples to ${outputPath} (${sizeKB} KB)`);
 }
 
@@ -200,7 +204,7 @@ function createBatchedDataset(
   };
 
   writeFileSync(outputPath, JSON.stringify(dataset));
-  const sizeKB = (require('fs').statSync(outputPath).size / 1024).toFixed(1);
+  const sizeKB = (statSync(outputPath).size / 1024).toFixed(1);
   console.log(`   ✅ Saved ${batches.length} batches to ${outputPath} (${sizeKB} KB)`);
 }
 
@@ -236,22 +240,22 @@ async function downloadMNIST(): Promise<void> {
 
     // Process training data
     console.log('   Processing training data...');
-    const trainImagesGz = Bun.file(join(MNIST_DIR, 'train-images.gz'));
-    const trainLabelsGz = Bun.file(join(MNIST_DIR, 'train-labels.gz'));
+    const trainImagesGz = readFileSync(join(MNIST_DIR, 'train-images.gz'));
+    const trainLabelsGz = readFileSync(join(MNIST_DIR, 'train-labels.gz'));
 
-    const trainImagesBuffer = Buffer.from(await gunzipAsync(Buffer.from(await trainImagesGz.arrayBuffer())));
-    const trainLabelsBuffer = Buffer.from(await gunzipAsync(Buffer.from(await trainLabelsGz.arrayBuffer())));
+    const trainImagesBuffer = Buffer.from(await gunzipAsync(trainImagesGz));
+    const trainLabelsBuffer = Buffer.from(await gunzipAsync(trainLabelsGz));
 
     const trainImages = parseIDXImages(trainImagesBuffer);
     const trainLabels = parseIDXLabels(trainLabelsBuffer);
 
     // Process test data
     console.log('   Processing test data...');
-    const testImagesGz = Bun.file(join(MNIST_DIR, 'test-images.gz'));
-    const testLabelsGz = Bun.file(join(MNIST_DIR, 'test-labels.gz'));
+    const testImagesGz = readFileSync(join(MNIST_DIR, 'test-images.gz'));
+    const testLabelsGz = readFileSync(join(MNIST_DIR, 'test-labels.gz'));
 
-    const testImagesBuffer = Buffer.from(await gunzipAsync(Buffer.from(await testImagesGz.arrayBuffer())));
-    const testLabelsBuffer = Buffer.from(await gunzipAsync(Buffer.from(await testLabelsGz.arrayBuffer())));
+    const testImagesBuffer = Buffer.from(await gunzipAsync(testImagesGz));
+    const testLabelsBuffer = Buffer.from(await gunzipAsync(testLabelsGz));
 
     const testImages = parseIDXImages(testImagesBuffer);
     const testLabels = parseIDXLabels(testLabelsBuffer);

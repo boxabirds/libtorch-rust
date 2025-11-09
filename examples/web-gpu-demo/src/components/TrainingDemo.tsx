@@ -72,7 +72,10 @@ export default function TrainingDemo({ gpuInfo }: TrainingDemoProps) {
 
       // Load training data
       const response = await fetch('/data/mnist/train-subset.json');
-      const dataset = await response.json();
+      const datasetJSON = await response.json();
+
+      // Extract samples array from dataset structure
+      const dataset = datasetJSON.samples || datasetJSON;
 
       console.log(`📦 Loaded ${dataset.length} training samples`);
 
