@@ -23,6 +23,7 @@ thiserror.workspace = true
 anyhow.workspace = true
 rand.workspace = true
 rand_distr.workspace = true
+pollster.workspace = true
 
 [dev-dependencies]
 criterion.workspace = true
@@ -40,3 +41,15 @@ path = "../examples/tensor_operations.rs"
 [[example]]
 name = "simple_nn"
 path = "../examples/simple_nn.rs"
+
+[[example]]
+name = "gpu_demo"
+path = "../examples/gpu_demo.rs"
+
+[[bench]]
+name = "tensor_benchmarks"
+harness = false
+
+[[bench]]
+name = "nn_benchmarks"
+harness = false

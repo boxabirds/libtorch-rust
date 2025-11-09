@@ -5,6 +5,9 @@ pub mod scalar;
 pub mod storage;
 pub mod tensor;
 
+// GPU backend (WebGPU)
+pub mod gpu;
+
 pub use device::Device;
 pub use dtype::DType;
 pub use error::TchError;
