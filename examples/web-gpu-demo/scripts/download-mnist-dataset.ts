@@ -215,14 +215,12 @@ async function downloadMNIST(): Promise<void> {
     mkdirSync(MNIST_DIR, { recursive: true });
   }
 
-  // Check if already downloaded
-  const trainImagesPath = join(MNIST_DIR, 'train-images.json');
-  if (existsSync(trainImagesPath)) {
-    console.log('✅ MNIST dataset already exists!\n');
-    console.log('   Training data: public/data/mnist/train-images.json');
-    console.log('   Test data: public/data/mnist/test-images.json');
-    console.log('   Subset (1000 samples): public/data/mnist/train-subset.json');
-    console.log('\n   To re-download, delete the public/data/mnist directory.\n');
+  // Check if already downloaded - look for train-subset.json which is always created
+  const trainSubsetPath = join(MNIST_DIR, 'train-subset.json');
+  if (existsSync(trainSubsetPath)) {
+    console.log('✅ MNIST dataset already exists!');
+    console.log('   Files: train-subset.json, train-batched.json, test-batched.json, etc.');
+    console.log('   To re-download, delete the public/data/mnist directory.\n');
     return;
   }
 
