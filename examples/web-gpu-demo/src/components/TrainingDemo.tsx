@@ -30,7 +30,12 @@ export default function TrainingDemo({ gpuInfo }: TrainingDemoProps) {
       // Dynamic import of WASM module
       const wasmModule = await import('/wasm/libtorch_wasm_trainer.js');
       await wasmModule.default();
+
+      // Store the module for later use
+      (window as any).__wasmTrainer = wasmModule;
+
       console.log('✅ WASM module loaded successfully');
+      console.log('   BrowserTrainer:', wasmModule.BrowserTrainer);
       setWasmLoaded(true);
     } catch (err: any) {
       console.error('❌ Failed to load WASM:', err);
@@ -71,9 +76,34 @@ export default function TrainingDemo({ gpuInfo }: TrainingDemoProps) {
 
       console.log(`📦 Loaded ${dataset.length} training samples`);
 
-      // TODO: Initialize WASM trainer and run training loop
-      // For now, simulate training with mock data
-      await simulateTraining(dataset.length);
+      // Initialize WASM trainer
+      const wasmModule = (window as any).__wasmTrainer;
+      const trainer = new wasmModule.BrowserTrainer(0.001); // learning_rate = 0.001
+
+      console.log('✅ WASM trainer initialized');
+      console.log('   Model:', trainer.model_info());
+
+      // Run real training loop
+      await trainWithWasm(trainer, dataset);
+
+      // Export trained weights
+      console.log('📤 Exporting trained weights...');
+      const weightsJson = trainer.export_full(0.0); // TODO: compute actual test accuracy
+
+      // Save to models directory
+      console.log('💾 Trained weights ready for download');
+      console.log('   Use these for MNIST Inference demo!');
+
+      // Trigger download
+      const blob = new Blob([weightsJson], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'mnist-mlp-browser-trained.json';
+      a.click();
+      URL.revokeObjectURL(url);
+
+      alert('✅ Training complete! Weights downloaded. Replace public/models/mnist-mlp.json with this file.');
 
     } catch (err: any) {
       console.error('❌ Training failed:', err);
@@ -83,35 +113,70 @@ export default function TrainingDemo({ gpuInfo }: TrainingDemoProps) {
     }
   };
 
-  // Mock training simulation - replace with actual WASM calls
-  const simulateTraining = async (numSamples: number) => {
+  // Real WASM training loop
+  const trainWithWasm = async (trainer: any, dataset: any[]) => {
     const epochs = 5;
     const batchSize = 32;
+    const numSamples = dataset.length;
     const batchesPerEpoch = Math.floor(numSamples / batchSize);
 
+    console.log(`🎯 Training: ${epochs} epochs, ${batchesPerEpoch} batches/epoch`);
+
     for (let epoch = 0; epoch < epochs; epoch++) {
-      for (let batch = 0; batch < Math.min(batchesPerEpoch, 10); batch++) {
-        // Simulate loss decreasing
-        const loss = 2.3 - (epoch * 0.4) - (batch * 0.02) + Math.random() * 0.1;
-        const accuracy = 0.1 + (epoch * 0.15) + (batch * 0.01);
+      console.log(`\n📊 Epoch ${epoch + 1}/${epochs}`);
+
+      // Shuffle dataset
+      const shuffled = [...dataset].sort(() => Math.random() - 0.5);
+
+      for (let batchIdx = 0; batchIdx < batchesPerEpoch; batchIdx++) {
+        const startIdx = batchIdx * batchSize;
+        const endIdx = Math.min(startIdx + batchSize, numSamples);
+        const batchData = shuffled.slice(startIdx, endIdx);
+
+        // Prepare batch data
+        const images: number[] = [];
+        const labels: number[] = [];
+
+        for (const sample of batchData) {
+          // Flatten image to 784 values
+          const flatImage = sample.image.flat();
+          images.push(...flatImage);
+          labels.push(sample.label);
+        }
+
+        // Train on batch (this calls Rust code!)
+        const loss = trainer.train_batch(images, labels);
+
+        // Evaluate occasionally for accuracy
+        let accuracy = 0;
+        if (batchIdx % 5 === 0) {
+          const evalResult = trainer.eval_batch(images, labels);
+          accuracy = evalResult[1]; // [loss, accuracy]
+        }
 
         const metric: TrainingMetrics = {
           epoch: epoch + 1,
-          batch: batch + 1,
-          loss: Math.max(0.1, loss),
-          accuracy: Math.min(0.95, accuracy),
+          batch: batchIdx + 1,
+          loss,
+          accuracy,
         };
 
         setCurrentMetric(metric);
         setMetrics(prev => [...prev, metric]);
 
-        // Simulate batch processing time
-        await new Promise(resolve => setTimeout(resolve, 100));
+        // Log progress
+        if (batchIdx % 10 === 0) {
+          console.log(`  Batch ${batchIdx + 1}/${batchesPerEpoch}: loss=${loss.toFixed(4)}`);
+        }
+
+        // Small delay to keep UI responsive
+        if (batchIdx % 5 === 0) {
+          await new Promise(resolve => setTimeout(resolve, 10));
+        }
       }
     }
 
     console.log('✅ Training complete!');
-    alert('Training complete! (This was a simulation - WASM integration coming next)');
   };
 
   return (
@@ -208,14 +273,14 @@ export default function TrainingDemo({ gpuInfo }: TrainingDemoProps) {
 
       {training && (
         <div style={styles.card}>
-          <h3>ℹ️ What's Happening</h3>
+          <h3>ℹ️ What's Happening (REAL Training!)</h3>
           <ul style={styles.infoList}>
-            <li>✅ WASM module loaded (Rust code compiled to WebAssembly)</li>
-            <li>✅ Training data loaded from browser cache</li>
-            <li>🔄 Forward pass: Computing predictions</li>
-            <li>🔄 Backward pass: Computing gradients using Burn's autodiff</li>
-            <li>🔄 Optimizer: Updating weights with Adam</li>
-            <li>⏱️ All computation happening in your browser!</li>
+            <li>✅ WASM module loaded (Rust + Burn framework)</li>
+            <li>✅ Training data loaded ({currentMetric?.epoch}/5 epochs)</li>
+            <li>🔥 Forward pass: Rust code computing predictions</li>
+            <li>🔥 Backward pass: Automatic differentiation calculating gradients</li>
+            <li>🔥 Adam optimizer: Updating 100,480 weights</li>
+            <li>⚡ All computation happening in your browser via WebAssembly!</li>
           </ul>
         </div>
       )}
@@ -233,14 +298,15 @@ export default function TrainingDemo({ gpuInfo }: TrainingDemoProps) {
       </div>
 
       <div style={styles.infoBox}>
-        <p><strong>🚀 Coming Next:</strong></p>
+        <p><strong>🚀 Training Workflow:</strong></p>
         <ul style={styles.infoList}>
-          <li>Real WASM training integration (currently simulation)</li>
-          <li>Export trained weights in PyTorch format</li>
-          <li>WebGPU backend for GPU-accelerated training</li>
-          <li>Live accuracy tracking on test set</li>
-          <li>Model checkpoint download</li>
+          <li>✅ Click "Start Training" to train a model from scratch</li>
+          <li>✅ Watch real-time loss and accuracy (Rust WASM doing backprop!)</li>
+          <li>✅ After training, weights auto-download as JSON</li>
+          <li>📝 Replace <code style={styles.inlineCode}>public/models/mnist-mlp.json</code> with downloaded file</li>
+          <li>🎨 Refresh and use MNIST Inference tab with your trained model!</li>
         </ul>
+        <p style={{marginTop: '10px', opacity: 0.8}}><strong>Coming:</strong> WebGPU backend for GPU-accelerated training</p>
       </div>
     </div>
   );
@@ -370,5 +436,12 @@ const styles: Record<string, React.CSSProperties> = {
     gap: '10px',
     fontSize: '14px',
     marginTop: '15px',
+  },
+  inlineCode: {
+    background: 'rgba(0, 0, 0, 0.3)',
+    padding: '2px 6px',
+    borderRadius: '4px',
+    fontFamily: 'monospace',
+    fontSize: '13px',
   },
 };
