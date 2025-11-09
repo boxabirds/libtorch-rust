@@ -1,6 +1,6 @@
 # libtorch-wasm-trainer
 
-**Status: Work in Progress (Milestone 1 - 70% complete)**
+**Status: Work in Progress (Milestone 1 - 90% complete)**
 
 Browser-based ML training using Rust + Burn framework, compiled to WASM. Train models in your browser with GPU/CPU, export weights compatible with PyTorch.
 
@@ -30,32 +30,37 @@ Fine-tune / Deploy
 ### What Works
 
 - ✅ MNIST MLP model (784→128→10) using Burn framework
-- ✅ Training loop with autograd (forward/backward pass)
+- ✅ Training loop structure with autograd (forward/backward pass)
+- ✅ Cross-entropy loss using Burn's built-in `CrossEntropyLoss`
 - ✅ PyTorch-compatible weight export format
 - ✅ WASM bindings via wasm-bindgen
+- ✅ Adam optimizer integration
+- ✅ Evaluation mode with accuracy tracking
 
-### What's In Progress
+### What's In Progress (Final 10%)
 
-- ⚠️ Fixing Burn 0.19 API compatibility
-- ⚠️ WASM compilation (blocked on API fixes)
-- ⚠️ Browser integration
+- ⚠️ Finalizing Burn 0.19 optimizer API
+  - Type annotations for `OptimizerAdaptor`
+  - AutodiffModule trait usage
+  - Element type conversion helpers
 
-### Next Steps (Remaining 30% of Milestone 1)
+### Next Steps (Remaining 10% of Milestone 1)
 
-1. **Fix Burn API issues:**
-   - Update to Burn 0.19 API (activation functions, loss computation)
-   - Fix `log_softmax` usage
-   - Update optimizer API
+1. **Fix Final API Details:**
+   - Correct optimizer type annotation or use trait objects
+   - Fix `grad()` method call (should use AutodiffModule trait)
+   - Handle Element type conversion properly
 
 2. **Compile to WASM:**
    ```bash
+   cd libtorch-wasm-trainer
    wasm-pack build --target web --out-dir pkg
    ```
 
 3. **Browser Integration:**
    - Load WASM module in browser demo
-   - Add training UI
-   - Test export → PyTorch workflow
+   - Add training UI component
+   - Test full workflow: train → export → load in PyTorch
 
 ## Architecture
 
