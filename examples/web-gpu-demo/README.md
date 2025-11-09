@@ -12,8 +12,11 @@ This is a browser-based demonstration of WebGPU compute operations that mirrors 
 - ✅ **Large-Scale Operations** - Realistic data sizes (millions of elements)
 - ✅ **Performance Metrics** - Throughput and GFLOPS measurements
 - ✅ **Beautiful UI** - Modern React interface with real-time status
+- ✅ **Works Out of the Box** - Benchmarks run immediately without setup
 
 ## Demos Included
+
+### GPU Benchmarks (Works Immediately)
 
 | Operation | Size | Memory | Metric |
 |-----------|------|--------|--------|
@@ -22,6 +25,10 @@ This is a browser-based demonstration of WebGPU compute operations that mirrors 
 | Matrix Multiply | 512×512 | 1 MB/matrix | GFLOPS |
 | ReLU Activation | 8M elements | 32 MB | M ops/sec |
 | Sigmoid Activation | 6M elements | 24 MB | M ops/sec |
+
+### MNIST Digit Recognition (Optional, Requires Training)
+
+Interactive digit drawing with neural network inference. Requires model training (see below).
 
 ## Prerequisites
 
@@ -54,6 +61,8 @@ bun run dev
 
 This will start the dev server at http://localhost:3000.
 
+**The GPU benchmarks work immediately!** Just click "Initialize WebGPU" and then "Run GPU Benchmarks".
+
 ### Alternative: Simple HTTP Server
 
 ```bash
@@ -66,11 +75,11 @@ bun run serve
 
 Then navigate to `http://localhost:8000`
 
-## Training MNIST Model
+## Training MNIST Model (Optional)
 
-The MNIST demo requires trained model weights. To train a model:
+The MNIST demo is **optional** and requires trained model weights. The GPU benchmarks work without this step.
 
-### Train Your Own (Required)
+To enable the MNIST demo:
 
 ```bash
 # Install PyTorch
