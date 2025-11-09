@@ -1,6 +1,6 @@
 # libtorch-wasm-trainer
 
-**Status: Work in Progress (Milestone 1 - 90% complete)**
+**Status: Milestone 1 Complete ✅ (100%)**
 
 Browser-based ML training using Rust + Burn framework, compiled to WASM. Train models in your browser with GPU/CPU, export weights compatible with PyTorch.
 
@@ -37,30 +37,37 @@ Fine-tune / Deploy
 - ✅ Adam optimizer integration
 - ✅ Evaluation mode with accuracy tracking
 
-### What's In Progress (Final 10%)
+### Burn 0.19 API Compatibility ✅
 
-- ⚠️ Finalizing Burn 0.19 optimizer API
-  - Type annotations for `OptimizerAdaptor`
-  - AutodiffModule trait usage
-  - Element type conversion helpers
+All Burn 0.19 API issues have been resolved:
+- ✅ Correct `OptimizerAdaptor` import from `burn::optim::adaptor`
+- ✅ Generic trainer with `Optimizer` trait bound
+- ✅ Proper gradient extraction using `GradientsParams::from_grads()`
+- ✅ Optimizer ownership handling with `std::mem::replace()`
+- ✅ Loss to scalar conversion using `.elem()`
+- ✅ All tests passing (4/4)
 
-### Next Steps (Remaining 10% of Milestone 1)
+### Next Steps (Milestone 2+)
 
-1. **Fix Final API Details:**
-   - Correct optimizer type annotation or use trait objects
-   - Fix `grad()` method call (should use AutodiffModule trait)
-   - Handle Element type conversion properly
+For detailed roadmap, see [ROADMAP.md](./ROADMAP.md)
 
-2. **Compile to WASM:**
+**Immediate Next Steps:**
+
+1. **Compile to WASM:**
    ```bash
    cd libtorch-wasm-trainer
    wasm-pack build --target web --out-dir pkg
    ```
 
-3. **Browser Integration:**
+2. **Browser Integration:**
    - Load WASM module in browser demo
    - Add training UI component
    - Test full workflow: train → export → load in PyTorch
+
+3. **Start Milestone 2:** PyTorch Round-Trip
+   - Create Python utility to load exported weights
+   - Verify gradient compatibility
+   - Test complete workflow
 
 ## Architecture
 
@@ -154,15 +161,15 @@ model.eval()
 
 ## Development Status
 
-### Milestone 1: Browser Training MVP (70% complete)
+### Milestone 1: Browser Training MVP ✅ (100% complete)
 
 - [x] Burn framework integration
 - [x] MNIST MLP model
 - [x] Training loop with autograd
 - [x] PyTorch-compatible export
-- [ ] Fix Burn 0.19 API compatibility
-- [ ] WASM compilation
-- [ ] Browser demo integration
+- [x] Fix Burn 0.19 API compatibility
+- [ ] WASM compilation (next step)
+- [ ] Browser demo integration (next step)
 
 ### Milestone 2: PyTorch Round-Trip (Planned)
 
@@ -185,20 +192,15 @@ model.eval()
 
 ## Known Issues
 
-1. **Burn API Changes**: Burn 0.19 has breaking API changes from 0.15:
-   - `log_softmax` API changed
-   - Activation functions moved
-   - Optimizer API updated
-
-2. **WASM Size**: Initial WASM bundle will be large (~10-20MB)
+1. **WASM Size**: Initial WASM bundle will be large (~10-20MB)
    - Can optimize with `wasm-opt`
    - Tree-shaking helps
 
-3. **Performance**: NdArray backend is CPU-only
+2. **Performance**: NdArray backend is CPU-only
    - Acceptable for prototyping
    - Will add WebGPU backend in Milestone 3
 
-## Building (Once API fixes are complete)
+## Building
 
 ```bash
 # Install wasm-pack
@@ -235,6 +237,7 @@ Same as libtorch-rust project (MIT OR Apache-2.0).
 
 ## Related
 
+- **Roadmap**: [ROADMAP.md](./ROADMAP.md) - Detailed plan for Milestones 2-4
 - **Browser Demo**: `../examples/web-gpu-demo/` - WebGPU operations and inference
 - **Strategy Doc**: `../docs/20251109-0845-webgpu-strategy.md`
 - **Burn Framework**: https://burn.dev

@@ -3,13 +3,20 @@ mod trainer;
 
 use burn::backend::ndarray::{NdArray, NdArrayDevice};
 use burn::backend::Autodiff;
+use burn::optim::adaptor::OptimizerAdaptor;
+use burn::optim::AdamConfig;
 use trainer::{MnistTrainer, TrainingConfig};
 use wasm_bindgen::prelude::*;
+
+use crate::model::MnistMLP;
 
 // Use NdArray backend with autodiff for WASM
 // Note: Using NdArray (CPU) initially to get it working
 // TODO: Switch to WGPU backend once we solve WASM + WebGPU integration
 type WasmBackend = Autodiff<NdArray>;
+
+// Concrete optimizer type for WASM
+type WasmOptimizer = OptimizerAdaptor<burn::optim::Adam, MnistMLP<WasmBackend>, WasmBackend>;
 
 /// Initialize panic hook for better error messages in browser
 #[wasm_bindgen(start)]
@@ -20,7 +27,7 @@ pub fn init() {
 /// Browser-based MNIST trainer
 #[wasm_bindgen]
 pub struct BrowserTrainer {
-    trainer: MnistTrainer<WasmBackend>,
+    trainer: MnistTrainer<WasmBackend, WasmOptimizer>,
 }
 
 #[wasm_bindgen]
@@ -30,7 +37,15 @@ impl BrowserTrainer {
     pub fn new(learning_rate: f64) -> Self {
         let device = NdArrayDevice::Cpu;
         let config = TrainingConfig::new(learning_rate, 32);
-        let trainer = MnistTrainer::new(config, device);
+        let model = MnistMLP::new(&device);
+        let optim = AdamConfig::new().init();
+
+        let trainer = MnistTrainer {
+            model,
+            optim,
+            config,
+            device,
+        };
 
         Self { trainer }
     }

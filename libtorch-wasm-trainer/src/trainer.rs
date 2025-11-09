@@ -1,6 +1,6 @@
 use burn::module::AutodiffModule;
 use burn::nn::loss::CrossEntropyLossConfig;
-use burn::optim::{AdamConfig, SimpleOptimizer};
+use burn::optim::{GradientsParams, Optimizer};
 use burn::tensor::backend::AutodiffBackend;
 use burn::tensor::{activation, ElementConversion, Int, Tensor};
 use serde::{Deserialize, Serialize};
@@ -46,18 +46,29 @@ impl Default for TrainingConfig {
 }
 
 /// MNIST Trainer for browser-based training
-pub struct MnistTrainer<B: AutodiffBackend, O = burn::optim::OptimizerAdaptor<burn::optim::Adam, MnistMLP<B>, B>> {
-    model: MnistMLP<B>,
-    optim: O,
-    config: TrainingConfig,
-    device: B::Device,
+pub struct MnistTrainer<B, O>
+where
+    B: AutodiffBackend,
+    O: Optimizer<MnistMLP<B>, B>,
+{
+    pub(crate) model: MnistMLP<B>,
+    pub(crate) optim: O,
+    pub(crate) config: TrainingConfig,
+    pub(crate) device: B::Device,
 }
 
-impl<B: AutodiffBackend> MnistTrainer<B> {
+impl<B, O> MnistTrainer<B, O>
+where
+    B: AutodiffBackend,
+    O: Optimizer<MnistMLP<B>, B>,
+{
     /// Create a new trainer
-    pub fn new(config: TrainingConfig, device: B::Device) -> Self {
+    pub fn new(config: TrainingConfig, device: B::Device) -> Self
+    where
+        O: Default,
+    {
         let model = MnistMLP::new(&device);
-        let optim = AdamConfig::new().init();
+        let optim = O::default();
 
         Self {
             model,
@@ -92,13 +103,14 @@ impl<B: AutodiffBackend> MnistTrainer<B> {
         // Backward pass
         let grads = loss.backward();
 
-        // Extract gradients for the model using the trait method
-        let model_grads = self.model.grad(&grads);
+        // Extract parameter-specific gradients
+        let grads = GradientsParams::from_grads(grads, &self.model);
 
-        // Update weights
-        self.model = self.optim.step(self.config.learning_rate, self.model, model_grads);
+        // Update weights with optimizer (takes ownership and returns updated model)
+        let model = std::mem::replace(&mut self.model, MnistMLP::new(&self.device));
+        self.model = self.optim.step(self.config.learning_rate, model, grads);
 
-        // Return loss value (convert to f32 using ElementConversion)
+        // Return loss value (convert to f32)
         loss.into_scalar().elem()
     }
 
@@ -175,21 +187,25 @@ mod tests {
     use super::*;
     use burn::backend::ndarray::{NdArray, NdArrayDevice};
     use burn::backend::Autodiff;
+    use burn::optim::adaptor::OptimizerAdaptor;
+    use burn::optim::AdamConfig;
 
     type TestBackend = Autodiff<NdArray>;
-
-    #[test]
-    fn test_trainer_creation() {
-        let device = NdArrayDevice::Cpu;
-        let config = TrainingConfig::default();
-        let _trainer: MnistTrainer<TestBackend> = MnistTrainer::new(config, device);
-    }
+    type TestOptimizer = OptimizerAdaptor<burn::optim::Adam, MnistMLP<TestBackend>, TestBackend>;
 
     #[test]
     fn test_train_batch() {
         let device = NdArrayDevice::Cpu;
         let config = TrainingConfig::default();
-        let mut trainer: MnistTrainer<TestBackend> = MnistTrainer::new(config, device);
+        let model = MnistMLP::new(&device);
+        let optim = AdamConfig::new().init();
+
+        let mut trainer: MnistTrainer<TestBackend, TestOptimizer> = MnistTrainer {
+            model,
+            optim,
+            config,
+            device,
+        };
 
         // Dummy batch
         let images = vec![0.0; 32 * 784];
@@ -203,7 +219,15 @@ mod tests {
     fn test_eval_batch() {
         let device = NdArrayDevice::Cpu;
         let config = TrainingConfig::default();
-        let trainer: MnistTrainer<TestBackend> = MnistTrainer::new(config, device);
+        let model = MnistMLP::new(&device);
+        let optim = AdamConfig::new().init();
+
+        let trainer: MnistTrainer<TestBackend, TestOptimizer> = MnistTrainer {
+            model,
+            optim,
+            config,
+            device,
+        };
 
         // Dummy batch
         let images = vec![0.0; 8 * 784];
@@ -218,7 +242,15 @@ mod tests {
     fn test_export_weights() {
         let device = NdArrayDevice::Cpu;
         let config = TrainingConfig::default();
-        let trainer: MnistTrainer<TestBackend> = MnistTrainer::new(config, device);
+        let model = MnistMLP::new(&device);
+        let optim = AdamConfig::new().init();
+
+        let trainer: MnistTrainer<TestBackend, TestOptimizer> = MnistTrainer {
+            model,
+            optim,
+            config,
+            device,
+        };
 
         let weights = trainer.export_weights();
 
