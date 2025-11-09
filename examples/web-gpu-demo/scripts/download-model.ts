@@ -13,6 +13,56 @@ const FALLBACK_URL = 'https://raw.githubusercontent.com/mnielsen/neural-networks
 const MODELS_DIR = join(import.meta.dir, '..', 'public', 'models');
 const MODEL_PATH = join(MODELS_DIR, 'mnist-mlp.json');
 
+function createSyntheticWeights() {
+  console.log('   Creating synthetic weights...');
+
+  const createWeights = (rows: number, cols: number) => {
+    const scale = Math.sqrt(2.0 / (rows + cols));
+    const weights: number[] = [];
+    for (let i = 0; i < rows * cols; i++) {
+      weights.push((Math.random() * 2 - 1) * scale);
+    }
+    return weights;
+  };
+
+  const createBias = (size: number) => {
+    return new Array(size).fill(0);
+  };
+
+  const modelWeights = {
+    model_type: 'mnist-mlp',
+    architecture: {
+      input_size: 784,
+      hidden_size: 128,
+      output_size: 10,
+    },
+    weights: {
+      fc1_weight: createWeights(128, 784),
+      fc1_bias: createBias(128),
+      fc2_weight: createWeights(10, 128),
+      fc2_bias: createBias(10),
+    },
+    metadata: {
+      created: new Date().toISOString(),
+      source: 'synthetic',
+      note: 'Randomly initialized weights - replace with trained model for accurate predictions',
+    },
+  };
+
+  // Ensure directory exists
+  if (!existsSync(MODELS_DIR)) {
+    mkdirSync(MODELS_DIR, { recursive: true });
+  }
+
+  // Save weights
+  writeFileSync(MODEL_PATH, JSON.stringify(modelWeights, null, 2));
+  console.log('✅ Synthetic weights saved to:', MODEL_PATH);
+  console.log('');
+  console.log('📝 Note: Using randomly initialized weights.');
+  console.log('   For accurate predictions, you need trained weights.');
+  console.log('   See README for instructions on obtaining trained models.');
+}
+
 async function downloadModel() {
   // Check if model already exists
   if (existsSync(MODEL_PATH)) {
@@ -20,67 +70,24 @@ async function downloadModel() {
     return;
   }
 
-  console.log('📥 Downloading MNIST model weights...');
-  console.log('   Source: HuggingFace/community models');
-
-  try {
-    // For now, create synthetic weights as a placeholder
-    // TODO: Replace with actual HuggingFace model download
-    console.log('⚠️  Using synthetic weights (HF download not yet implemented)');
-    console.log('   Creating randomly initialized weights...');
-
-    const createWeights = (rows: number, cols: number) => {
-      const scale = Math.sqrt(2.0 / (rows + cols));
-      const weights: number[] = [];
-      for (let i = 0; i < rows * cols; i++) {
-        weights.push((Math.random() * 2 - 1) * scale);
-      }
-      return weights;
-    };
-
-    const createBias = (size: number) => {
-      return new Array(size).fill(0);
-    };
-
-    const modelWeights = {
-      model_type: 'mnist-mlp',
-      architecture: {
-        input_size: 784,
-        hidden_size: 128,
-        output_size: 10,
-      },
-      weights: {
-        fc1_weight: createWeights(128, 784),
-        fc1_bias: createBias(128),
-        fc2_weight: createWeights(10, 128),
-        fc2_bias: createBias(10),
-      },
-      metadata: {
-        created: new Date().toISOString(),
-        source: 'synthetic',
-        note: 'Randomly initialized weights - replace with trained model for accurate predictions',
-      },
-    };
-
-    // Ensure directory exists
-    if (!existsSync(MODELS_DIR)) {
-      mkdirSync(MODELS_DIR, { recursive: true });
-    }
-
-    // Save weights
-    writeFileSync(MODEL_PATH, JSON.stringify(modelWeights, null, 2));
-    console.log('✅ Model weights saved to:', MODEL_PATH);
-    console.log('');
-    console.log('📝 Note: Currently using synthetic weights.');
-    console.log('   For accurate predictions, replace with trained weights from:');
-    console.log('   - HuggingFace: https://huggingface.co/models?filter=mnist');
-    console.log('   - Or train your own and export to this format');
-
-  } catch (error) {
-    console.error('❌ Failed to download model:', error);
-    console.error('   Continuing with runtime weight initialization...');
-    process.exit(0); // Don't fail the build
-  }
+  console.log('📥 Checking for MNIST model weights...');
+  console.log('');
+  console.log('⚠️  Model weights not found!');
+  console.log('');
+  console.log('To use the MNIST demo, you need to train a model:');
+  console.log('');
+  console.log('  1. Install PyTorch:');
+  console.log('     pip install torch torchvision');
+  console.log('');
+  console.log('  2. Train the model (~2-3 minutes):');
+  console.log('     python scripts/train_mnist.py');
+  console.log('');
+  console.log('  3. Restart the dev server:');
+  console.log('     bun run dev');
+  console.log('');
+  console.log('The demo will continue without model weights.');
+  console.log('MNIST demo will show an error until you train the model.');
+  console.log('');
 }
 
 // Run the download

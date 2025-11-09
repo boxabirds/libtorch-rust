@@ -21,7 +21,7 @@ export default function App() {
   const [error, setError] = useState<string>('');
   const [results, setResults] = useState<DemoResult[]>([]);
   const [running, setRunning] = useState(false);
-  const [activeTab, setActiveTab] = useState<Tab>('mnist');
+  const [activeTab, setActiveTab] = useState<Tab>('benchmarks');
 
   useEffect(() => {
     setSupported(isWebGPUSupported());
@@ -205,20 +205,20 @@ export default function App() {
               <button
                 style={{
                   ...styles.tab,
-                  ...(activeTab === 'mnist' ? styles.tabActive : {}),
-                }}
-                onClick={() => setActiveTab('mnist')}
-              >
-                🎨 MNIST Demo
-              </button>
-              <button
-                style={{
-                  ...styles.tab,
                   ...(activeTab === 'benchmarks' ? styles.tabActive : {}),
                 }}
                 onClick={() => setActiveTab('benchmarks')}
               >
                 ⚡ Benchmarks
+              </button>
+              <button
+                style={{
+                  ...styles.tab,
+                  ...(activeTab === 'mnist' ? styles.tabActive : {}),
+                }}
+                onClick={() => setActiveTab('mnist')}
+              >
+                🎨 MNIST Demo (requires training)
               </button>
             </div>
           </div>

@@ -62,9 +62,14 @@ export default function DrawingCanvas({
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
+    console.log('🎨 Canvas Processing:');
+
     // Get image data and resize to 28x28
     const imageData = ctx.getImageData(0, 0, width, height);
+    console.log(`   - Original canvas: ${width}×${height}`);
+
     const resized = resizeImageData(imageData, 28, 28);
+    console.log(`   - Resized to: 28×28`);
 
     // Convert to grayscale and normalize to 0-1
     const normalized = new Float32Array(784);
@@ -78,6 +83,19 @@ export default function DrawingCanvas({
       );
       normalized[i] = gray;
     }
+
+    // Log statistics
+    const nonZero = Array.from(normalized).filter(v => v > 0.1).length;
+    const min = Math.min(...Array.from(normalized));
+    const max = Math.max(...Array.from(normalized));
+    const mean = Array.from(normalized).reduce((a, b) => a + b, 0) / 784;
+
+    console.log(`   - Pixel statistics:`);
+    console.log(`     * Non-zero pixels: ${nonZero}/784 (${(nonZero/784*100).toFixed(1)}%)`);
+    console.log(`     * Value range: [${min.toFixed(3)}, ${max.toFixed(3)}]`);
+    console.log(`     * Mean value: ${mean.toFixed(3)}`);
+    console.log(`   - First row (28 pixels):`, Array.from(normalized.slice(0, 28)).map(v => v > 0.5 ? '█' : v > 0.1 ? '▓' : '.').join(''));
+    console.log('');
 
     onImageChange(normalized);
   };

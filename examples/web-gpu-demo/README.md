@@ -12,8 +12,11 @@ This is a browser-based demonstration of WebGPU compute operations that mirrors 
 - ✅ **Large-Scale Operations** - Realistic data sizes (millions of elements)
 - ✅ **Performance Metrics** - Throughput and GFLOPS measurements
 - ✅ **Beautiful UI** - Modern React interface with real-time status
+- ✅ **Works Out of the Box** - Benchmarks run immediately without setup
 
 ## Demos Included
+
+### GPU Benchmarks (Works Immediately)
 
 | Operation | Size | Memory | Metric |
 |-----------|------|--------|--------|
@@ -22,6 +25,10 @@ This is a browser-based demonstration of WebGPU compute operations that mirrors 
 | Matrix Multiply | 512×512 | 1 MB/matrix | GFLOPS |
 | ReLU Activation | 8M elements | 32 MB | M ops/sec |
 | Sigmoid Activation | 6M elements | 24 MB | M ops/sec |
+
+### MNIST Digit Recognition (Optional, Requires Training)
+
+Interactive digit drawing with neural network inference. Requires model training (see below).
 
 ## Prerequisites
 
@@ -52,7 +59,9 @@ bun install
 bun run dev
 ```
 
-This will start Bun's built-in server and open your browser automatically.
+This will start the dev server at http://localhost:3000.
+
+**The GPU benchmarks work immediately!** Just click "Initialize WebGPU" and then "Run GPU Benchmarks".
 
 ### Alternative: Simple HTTP Server
 
@@ -65,6 +74,38 @@ bun run serve
 ```
 
 Then navigate to `http://localhost:8000`
+
+## Training MNIST Model (Optional)
+
+The MNIST demo is **optional** and requires trained model weights. The GPU benchmarks work without this step.
+
+To enable the MNIST demo:
+
+```bash
+# Install PyTorch
+pip install torch torchvision
+
+# Train the model (~2-3 minutes)
+python scripts/train_mnist.py
+```
+
+This will:
+- Train a 784→128→10 MLP on MNIST
+- Export weights to `public/models/mnist-mlp.json`
+- Achieve ~97-98% test accuracy
+
+### Weight File Format
+
+```json
+{
+  "weights": {
+    "fc1_weight": [...],  // 128×784 flat array
+    "fc1_bias": [...],    // 128 array
+    "fc2_weight": [...],  // 10×128 flat array
+    "fc2_bias": [...]     // 10 array
+  }
+}
+```
 
 ## Browser Compatibility
 
