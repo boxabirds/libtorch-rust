@@ -59,9 +59,14 @@ bun install
 bun run dev
 ```
 
-This will start the dev server at http://localhost:3000.
+This will:
+1. **Automatically download MNIST dataset** (if not already present, ~140MB)
+2. **Check for trained model weights** (optional)
+3. Start the dev server at http://localhost:3000
 
 **The GPU benchmarks work immediately!** Just click "Initialize WebGPU" and then "Run GPU Benchmarks".
+
+**Note**: The first run will download the MNIST dataset (~140MB). Subsequent runs skip the download if the dataset already exists.
 
 ### Alternative: Simple HTTP Server
 
@@ -96,7 +101,9 @@ This will:
 
 ## Downloading MNIST Dataset for Browser Training
 
-To enable browser-based training (using the `libtorch-wasm-trainer`), you need the MNIST dataset:
+The MNIST dataset is **automatically downloaded** when you run `bun run dev` for the first time.
+
+If you want to download it manually or re-download:
 
 ```bash
 # Download and process MNIST dataset
