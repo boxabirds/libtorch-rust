@@ -353,3 +353,57 @@ export async function matmul(
 
   return { data: result, timeMs, gflops };
 }
+
+export async function softmax(
+  device: GPUDevice,
+  input: Float32Array
+): Promise<OperationResult> {
+  const startTime = performance.now();
+
+  const bufferIn = createBuffer(
+    device,
+    input,
+    GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC
+  );
+  const bufferOut = device.createBuffer({
+    size: input.byteLength,
+    usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC,
+  });
+
+  const params = new Uint32Array([input.length]);
+  const bufferParams = createBuffer(
+    device,
+    new Float32Array(params.buffer),
+    GPUBufferUsage.STORAGE
+  );
+
+  const pipeline = createComputePipeline(device, shaders.SOFTMAX);
+
+  const bindGroup = device.createBindGroup({
+    layout: pipeline.getBindGroupLayout(0),
+    entries: [
+      { binding: 0, resource: { buffer: bufferIn } },
+      { binding: 1, resource: { buffer: bufferOut } },
+      { binding: 2, resource: { buffer: bufferParams } },
+    ],
+  });
+
+  const commandEncoder = device.createCommandEncoder();
+  const passEncoder = commandEncoder.beginComputePass();
+  passEncoder.setPipeline(pipeline);
+  passEncoder.setBindGroup(0, bindGroup);
+  passEncoder.dispatchWorkgroups(1); // Single workgroup for softmax
+  passEncoder.end();
+  device.queue.submit([commandEncoder.finish()]);
+
+  const result = await readBuffer(device, bufferOut);
+
+  bufferIn.destroy();
+  bufferOut.destroy();
+  bufferParams.destroy();
+
+  const endTime = performance.now();
+  const timeMs = endTime - startTime;
+
+  return { data: result, timeMs };
+}

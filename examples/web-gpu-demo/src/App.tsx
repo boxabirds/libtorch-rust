@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { initializeGPU, isWebGPUSupported, GpuDeviceInfo } from './webgpu/device';
 import * as ops from './webgpu/operations';
+import MNISTDemo from './components/MNISTDemo';
 
 interface DemoResult {
   name: string;
@@ -12,12 +13,15 @@ interface DemoResult {
   details?: string;
 }
 
+type Tab = 'mnist' | 'benchmarks';
+
 export default function App() {
   const [supported, setSupported] = useState(false);
   const [gpuInfo, setGpuInfo] = useState<GpuDeviceInfo | null>(null);
   const [error, setError] = useState<string>('');
   const [results, setResults] = useState<DemoResult[]>([]);
   const [running, setRunning] = useState(false);
+  const [activeTab, setActiveTab] = useState<Tab>('mnist');
 
   useEffect(() => {
     setSupported(isWebGPUSupported());
@@ -196,56 +200,88 @@ export default function App() {
               <div><strong>Architecture:</strong> {gpuInfo.info.architecture}</div>
               <div><strong>Description:</strong> {gpuInfo.info.description}</div>
             </div>
-            <button
-              style={{ ...styles.button, marginTop: '20px' }}
-              onClick={handleRunDemos}
-              disabled={running}
-            >
-              {running ? '⏳ Running Demos...' : '▶️ Run GPU Demos'}
-            </button>
+
+            <div style={styles.tabs}>
+              <button
+                style={{
+                  ...styles.tab,
+                  ...(activeTab === 'mnist' ? styles.tabActive : {}),
+                }}
+                onClick={() => setActiveTab('mnist')}
+              >
+                🎨 MNIST Demo
+              </button>
+              <button
+                style={{
+                  ...styles.tab,
+                  ...(activeTab === 'benchmarks' ? styles.tabActive : {}),
+                }}
+                onClick={() => setActiveTab('benchmarks')}
+              >
+                ⚡ Benchmarks
+              </button>
+            </div>
           </div>
 
-          {results.length > 0 && (
-            <div style={styles.resultsContainer}>
-              {results.map((result) => (
-                <div key={result.name} style={styles.resultCard}>
-                  <div style={styles.resultHeader}>
-                    <span style={styles.resultName}>{result.name}</span>
-                    <span style={styles.resultStatus}>
-                      {result.status === 'pending' && '⏸️ Pending'}
-                      {result.status === 'running' && '⏳ Running...'}
-                      {result.status === 'success' && '✅ Success'}
-                      {result.status === 'error' && '❌ Error'}
-                    </span>
-                  </div>
-                  {result.details && (
-                    <div style={styles.resultDetails}>{result.details}</div>
-                  )}
-                  {result.status === 'success' && (
-                    <div style={styles.resultMetrics}>
-                      <div>
-                        <strong>Time:</strong> {result.timeMs?.toFixed(2)} ms
+          {activeTab === 'mnist' && (
+            <MNISTDemo gpuInfo={gpuInfo} />
+          )}
+
+          {activeTab === 'benchmarks' && (
+            <>
+              <div style={styles.card}>
+                <button
+                  style={styles.button}
+                  onClick={handleRunDemos}
+                  disabled={running}
+                >
+                  {running ? '⏳ Running Benchmarks...' : '▶️ Run GPU Benchmarks'}
+                </button>
+              </div>
+
+              {results.length > 0 && (
+                <div style={styles.resultsContainer}>
+                  {results.map((result) => (
+                    <div key={result.name} style={styles.resultCard}>
+                      <div style={styles.resultHeader}>
+                        <span style={styles.resultName}>{result.name}</span>
+                        <span style={styles.resultStatus}>
+                          {result.status === 'pending' && '⏸️ Pending'}
+                          {result.status === 'running' && '⏳ Running...'}
+                          {result.status === 'success' && '✅ Success'}
+                          {result.status === 'error' && '❌ Error'}
+                        </span>
                       </div>
-                      {result.throughput && (
-                        <div>
-                          <strong>Throughput:</strong>{' '}
-                          {(result.throughput / 1_000_000).toFixed(1)} M ops/sec
+                      {result.details && (
+                        <div style={styles.resultDetails}>{result.details}</div>
+                      )}
+                      {result.status === 'success' && (
+                        <div style={styles.resultMetrics}>
+                          <div>
+                            <strong>Time:</strong> {result.timeMs?.toFixed(2)} ms
+                          </div>
+                          {result.throughput && (
+                            <div>
+                              <strong>Throughput:</strong>{' '}
+                              {(result.throughput / 1_000_000).toFixed(1)} M ops/sec
+                            </div>
+                          )}
+                          {result.gflops && (
+                            <div>
+                              <strong>Performance:</strong>{' '}
+                              {result.gflops.toFixed(2)} GFLOPS
+                            </div>
+                          )}
                         </div>
                       )}
-                      {result.gflops && (
-                        <div>
-                          <strong>Performance:</strong>{' '}
-                          {result.gflops.toFixed(2)} GFLOPS
-                        </div>
+                      {result.error && (
+                        <div style={styles.error}>{result.error}</div>
                       )}
                     </div>
-                  )}
-                  {result.error && (
-                    <div style={styles.error}>{result.error}</div>
-                  )}
+                  ))}
                 </div>
-              ))}
-            </div>
+              )}
+            </>
           )}
         </>
       )}
@@ -309,6 +345,27 @@ const styles: Record<string, React.CSSProperties> = {
     gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
     gap: '15px',
     marginTop: '20px',
+  },
+  tabs: {
+    display: 'flex',
+    gap: '10px',
+    marginTop: '20px',
+    justifyContent: 'center',
+  },
+  tab: {
+    padding: '12px 24px',
+    background: 'rgba(255, 255, 255, 0.05)',
+    border: '1px solid rgba(255, 255, 255, 0.2)',
+    borderRadius: '8px',
+    color: 'white',
+    cursor: 'pointer',
+    fontSize: '16px',
+    fontWeight: 'bold',
+    transition: 'all 0.2s',
+  },
+  tabActive: {
+    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+    borderColor: 'transparent',
   },
   error: {
     color: '#fca5a5',
