@@ -1,14 +1,15 @@
 mod model;
 mod trainer;
 
+// Re-export for examples and testing
+pub use model::MnistMLP;
+pub use trainer::{MnistTrainer, TrainingConfig, PyTorchWeights};
+
 use burn::backend::ndarray::{NdArray, NdArrayDevice};
 use burn::backend::Autodiff;
 use burn::optim::adaptor::OptimizerAdaptor;
 use burn::optim::AdamConfig;
-use trainer::{MnistTrainer, TrainingConfig};
 use wasm_bindgen::prelude::*;
-
-use crate::model::MnistMLP;
 
 // Use NdArray backend with autodiff for WASM
 // Note: Using NdArray (CPU) initially to get it working

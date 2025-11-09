@@ -51,10 +51,10 @@ where
     B: AutodiffBackend,
     O: Optimizer<MnistMLP<B>, B>,
 {
-    pub(crate) model: MnistMLP<B>,
-    pub(crate) optim: O,
-    pub(crate) config: TrainingConfig,
-    pub(crate) device: B::Device,
+    pub model: MnistMLP<B>,
+    pub optim: O,
+    pub config: TrainingConfig,
+    pub device: B::Device,
 }
 
 impl<B, O> MnistTrainer<B, O>
