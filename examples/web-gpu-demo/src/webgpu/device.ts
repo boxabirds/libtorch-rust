@@ -41,8 +41,8 @@ export async function initializeGPU(): Promise<GpuDeviceInfo> {
     );
   }
 
-  // Get adapter info
-  const adapterInfo = await adapter.requestAdapterInfo();
+  // Get adapter info - use the info property directly (current WebGPU spec)
+  const adapterInfo = adapter.info || {};
 
   // Request device
   const device = await adapter.requestDevice({
@@ -70,10 +70,10 @@ export async function initializeGPU(): Promise<GpuDeviceInfo> {
     adapter,
     device,
     info: {
-      vendor: adapterInfo.vendor || 'Unknown',
-      architecture: adapterInfo.architecture || 'Unknown',
-      device: adapterInfo.device || 'Unknown',
-      description: adapterInfo.description || 'Unknown',
+      vendor: (adapterInfo as any).vendor || 'Unknown',
+      architecture: (adapterInfo as any).architecture || 'Unknown',
+      device: (adapterInfo as any).device || 'Unknown',
+      description: (adapterInfo as any).description || 'Unknown',
     },
   };
 }
