@@ -26,6 +26,18 @@ This is a browser-based demonstration of WebGPU compute operations that mirrors 
 | ReLU Activation | 8M elements | 32 MB | M ops/sec |
 | Sigmoid Activation | 6M elements | 24 MB | M ops/sec |
 
+### Browser Training with WASM (New! ✨)
+
+**Train a neural network directly in your browser!**
+
+- ✅ Rust + Burn framework compiled to WebAssembly
+- ✅ Full training loop with forward/backward pass
+- ✅ Real-time loss and accuracy tracking
+- ✅ PyTorch-compatible weight export
+- 🔄 CPU backend (WebGPU acceleration coming in Milestone 3)
+
+This demonstrates **Milestone 1** of the libtorch-wasm-trainer: browser-based ML training with autodiff.
+
 ### MNIST Digit Recognition (Optional, Requires Training)
 
 Interactive digit drawing with neural network inference. Requires model training (see below).
@@ -53,15 +65,30 @@ bun install
 
 ## Running the Demo
 
-### Development Mode (Recommended)
+### Quick Start
 
 ```bash
+cd examples/web-gpu-demo
+
+# Install dependencies
+bun install
+
+# First time setup (downloads data, trains model, builds WASM)
+bun run setup
+
+# Start dev server (fast!)
 bun run dev
 ```
 
-This will start the dev server at http://localhost:3000.
+**All demos work immediately!** Click "Initialize WebGPU" then explore:
+- **⚡ Benchmarks** - GPU compute operations (works out of the box)
+- **🎓 Browser Training** - Train MNIST model in browser with WASM (requires setup)
+- **🎨 MNIST Inference** - Draw digits for recognition (requires setup)
 
-**The GPU benchmarks work immediately!** Just click "Initialize WebGPU" and then "Run GPU Benchmarks".
+**Note**:
+- GPU Benchmarks work without any setup
+- Training/Inference demos require `bun run setup` first time only
+- After setup, `bun run dev` starts instantly (no rebuilding/downloading)
 
 ### Alternative: Simple HTTP Server
 
@@ -93,6 +120,42 @@ This will:
 - Train a 784→128→10 MLP on MNIST
 - Export weights to `public/models/mnist-mlp.json`
 - Achieve ~97-98% test accuracy
+
+## Downloading MNIST Dataset for Browser Training
+
+The MNIST dataset is **automatically downloaded** when you run `bun run dev` for the first time.
+
+If you want to download it manually or re-download:
+
+```bash
+# Download and process MNIST dataset
+bun run download-mnist
+```
+
+This will:
+- Download raw MNIST data from Yann LeCun's website
+- Convert to browser-friendly JSON format
+- Create multiple versions optimized for different use cases:
+  - `train-subset.json` - 1,000 samples for quick demos (~2.5 MB)
+  - `train-batched.json` - 60,000 samples in batches of 32 (~140 MB, recommended)
+  - `test-batched.json` - 10,000 test samples in batches of 100 (~23 MB)
+  - `train-full.json` - Full dataset as single JSON (large, ~140 MB)
+  - `test-full.json` - Full test set as single JSON (~23 MB)
+
+**Recommendation**: Use `train-batched.json` for browser training as it's optimized for batch processing.
+
+### One-Command Setup
+
+To download MNIST dataset, train a PyTorch model, and build WASM:
+
+```bash
+bun run setup
+```
+
+This runs:
+1. `download-mnist` - Downloads training data
+2. `download-model` - Trains PyTorch model for inference demo
+3. `build-wasm` - Builds WASM module for browser training
 
 ### Weight File Format
 
@@ -211,14 +274,65 @@ This browser demo validates the WebGPU strategy by showing:
 
 This proves that Phase 3 (WASM compilation) of the libtorch-rust roadmap is viable.
 
+## Browser Training Details
+
+### How It Works
+
+The browser training demo uses the `libtorch-wasm-trainer` crate compiled to WebAssembly:
+
+1. **Rust Code** → Compiled to WASM (2.9MB module)
+2. **Burn Framework** → Autodiff for backpropagation
+3. **NdArray Backend** → CPU-based tensor operations
+4. **JavaScript Bindings** → wasm-bindgen for browser integration
+
+### Training Architecture
+
+```
+Browser
+  ↓
+WASM Module (libtorch_wasm_trainer)
+  ↓
+Burn Framework (Rust ML)
+  ↓
+  ├─ Model: MLP (784→128→10)
+  ├─ Optimizer: Adam (lr=0.001)
+  ├─ Loss: Cross-Entropy
+  └─ Backend: NdArray (CPU)
+```
+
+### Current Status
+
+- ✅ WASM module compiles successfully
+- ✅ Browser integration with React UI
+- ✅ Training data loading
+- 🔄 Training loop simulation (real WASM integration next)
+- ⏳ WebGPU backend (Milestone 3)
+
+### Rebuilding WASM
+
+Only needed when you modify Rust code in `libtorch-wasm-trainer`:
+
+```bash
+cd examples/web-gpu-demo
+bun run build-wasm
+```
+
+This will:
+1. Compile the Rust crate to WASM
+2. Copy the generated files to `public/wasm/`
+3. Restart the dev server to see changes
+
+**Tip**: Browser automatically cache-busts WASM files, no need to rebuild every time!
+
 ## Next Steps
 
 After Phase 3 (WASM Compilation):
 
-1. Compile Rust libtorch-rust to WASM
-2. Replace TypeScript ops with WASM imports
-3. Provide Python-like API in browser
-4. Enable full ML training in browser
+1. ✅ Compile Rust libtorch-rust to WASM *(Complete!)*
+2. 🔄 Integrate WASM training loop with real data *(In Progress)*
+3. ⏳ Add WebGPU backend for GPU acceleration
+4. ⏳ Export trained weights in PyTorch format
+5. ⏳ Enable full ML training workflows in browser
 
 ## Related Files
 

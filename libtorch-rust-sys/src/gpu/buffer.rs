@@ -93,8 +93,8 @@ impl GpuBuffer {
             sender.send(result).unwrap();
         });
 
-        // Wait for GPU to finish
-        self.device.poll(wgpu::Maintain::Wait);
+        // Wait for GPU to finish and map completion
+        // wgpu 27+ automatically processes pending operations when awaiting
         receiver.await.unwrap().unwrap();
 
         // Read data

@@ -6,17 +6,22 @@ license.workspace = true
 authors.workspace = true
 repository.workspace = true
 
+[package.metadata.wasm-pack.profile.release]
+wasm-opt = false
+
 [lib]
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
 # Burn framework with NdArray backend for WASM
 # Note: Using NdArray backend initially (CPU), will add WGPU later
-burn = { version = "0.19", default-features = false, features = ["ndarray", "train"] }
+# Removed "train" feature for WASM compatibility (no blocking ops in WASM)
+# Need "autodiff" for gradients, "ndarray" for CPU backend
+burn = { version = "0.19", default-features = false, features = ["ndarray", "autodiff"] }
 burn-ndarray = { version = "0.19" }
 
 # Required for WASM random number generation
-getrandom = { version = "0.2", features = ["js"] }
+getrandom = { version = "0.3", features = ["wasm_js"] }
 
 # WASM bindings
 wasm-bindgen = "0.2"
@@ -38,6 +43,11 @@ console_error_panic_hook = "0.1"
 
 [dev-dependencies]
 wasm-bindgen-test = "0.3"
+
+[[example]]
+name = "verify_training"
+path = "examples/verify_training.rs"
+required-features = []
 
 [profile.release]
 opt-level = "z"  # Optimize for size

@@ -234,7 +234,9 @@ impl GpuTensor {
                 label: Some("MatMul Pipeline"),
                 layout: Some(&pipeline_layout),
                 module: &shader,
-                entry_point: "main",
+                entry_point: Some("main"),
+                compilation_options: Default::default(),
+                cache: None,
             });
 
         // Create bind group
@@ -372,7 +374,9 @@ impl GpuTensor {
                 label: Some("Elementwise Pipeline"),
                 layout: Some(&pipeline_layout),
                 module: &shader,
-                entry_point,
+                entry_point: Some(entry_point),
+                compilation_options: Default::default(),
+                cache: None,
             });
 
         // Create bind group
@@ -487,7 +491,9 @@ impl GpuTensor {
                 label: Some("Unary Pipeline"),
                 layout: Some(&pipeline_layout),
                 module: &shader,
-                entry_point,
+                entry_point: Some(entry_point),
+                compilation_options: Default::default(),
+                cache: None,
             });
 
         // Create bind group

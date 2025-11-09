@@ -40,7 +40,7 @@ impl GpuDevice {
     /// Create a GPU device with specific backend
     pub async fn new_with_backend(backends: wgpu::Backends) -> Result<Self, GpuDeviceError> {
         // Create instance
-        let instance = wgpu::Instance::new(wgpu::InstanceDescriptor {
+        let instance = wgpu::Instance::new(&wgpu::InstanceDescriptor {
             backends,
             ..Default::default()
         });
@@ -53,8 +53,8 @@ impl GpuDevice {
                 force_fallback_adapter: false,
             })
             .await
-            .ok_or_else(|| {
-                GpuDeviceError::AdapterRequest("No suitable GPU adapter found".to_string())
+            .map_err(|e| {
+                GpuDeviceError::AdapterRequest(format!("No suitable GPU adapter found: {}", e))
             })?;
 
         let adapter_info = adapter.get_info();
@@ -62,14 +62,14 @@ impl GpuDevice {
 
         // Request device and queue
         let (device, queue) = adapter
-            .request_device(
-                &wgpu::DeviceDescriptor {
-                    label: Some("LibTorch-Rust GPU Device"),
-                    required_features: wgpu::Features::empty(),
-                    required_limits: wgpu::Limits::default(),
-                },
-                None,
-            )
+            .request_device(&wgpu::DeviceDescriptor {
+                label: Some("LibTorch-Rust GPU Device"),
+                required_features: wgpu::Features::empty(),
+                required_limits: wgpu::Limits::default(),
+                memory_hints: wgpu::MemoryHints::default(),
+                experimental_features: wgpu::ExperimentalFeatures::default(),
+                trace: Default::default(),
+            })
             .await
             .map_err(|e| GpuDeviceError::DeviceRequest(e.to_string()))?;
 
@@ -119,7 +119,9 @@ impl GpuDevice {
                 label: Some("Compute Pipeline"),
                 layout: Some(&pipeline_layout),
                 module: &shader,
-                entry_point,
+                entry_point: Some(entry_point),
+                compilation_options: Default::default(),
+                cache: None,
             })
     }
 }

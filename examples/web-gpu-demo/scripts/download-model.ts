@@ -74,7 +74,15 @@ async function downloadModel() {
   console.log('');
   console.log('⚠️  Model weights not found!');
   console.log('');
-  console.log('To use the MNIST demo, you need to train a model:');
+  console.log('Creating synthetic weights as fallback...');
+  console.log('(For accurate predictions, train a real model with: python scripts/train_mnist.py)');
+  console.log('');
+
+  // Create synthetic weights so the demo at least loads
+  createSyntheticWeights();
+
+  console.log('');
+  console.log('To get accurate predictions:');
   console.log('');
   console.log('  1. Install PyTorch:');
   console.log('     pip install torch torchvision');
@@ -84,9 +92,6 @@ async function downloadModel() {
   console.log('');
   console.log('  3. Restart the dev server:');
   console.log('     bun run dev');
-  console.log('');
-  console.log('The demo will continue without model weights.');
-  console.log('MNIST demo will show an error until you train the model.');
   console.log('');
 }
 

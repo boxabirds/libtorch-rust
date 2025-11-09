@@ -4,11 +4,15 @@
   "description": "Browser-based WebGPU demo for libtorch-rust",
   "type": "module",
   "scripts": {
-    "predev": "bun run scripts/download-model.ts",
+    "predev": "bun run download-mnist && bun run build-wasm",
     "dev": "bun run dev-server.ts",
     "build": "bun run build.ts",
+    "clean": "rm -rf dist",
     "serve-dist": "cd dist && python3 -m http.server 8000",
-    "download-model": "bun run scripts/download-model.ts"
+    "download-model": "bun run scripts/download-model.ts",
+    "download-mnist": "bun run scripts/download-mnist-dataset.ts",
+    "build-wasm": "bash scripts/build-wasm.sh",
+    "setup": "bun run download-mnist && bun run download-model && bun run build-wasm"
   },
   "dependencies": {
     "react": "^18.2.0",

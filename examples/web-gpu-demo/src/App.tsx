@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { initializeGPU, isWebGPUSupported, GpuDeviceInfo } from './webgpu/device';
 import * as ops from './webgpu/operations';
 import MNISTDemo from './components/MNISTDemo';
+import TrainingDemo from './components/TrainingDemo';
 
 interface DemoResult {
   name: string;
@@ -13,7 +14,7 @@ interface DemoResult {
   details?: string;
 }
 
-type Tab = 'mnist' | 'benchmarks';
+type Tab = 'mnist' | 'benchmarks' | 'training';
 
 export default function App() {
   const [supported, setSupported] = useState(false);
@@ -24,7 +25,9 @@ export default function App() {
   const [activeTab, setActiveTab] = useState<Tab>('benchmarks');
 
   useEffect(() => {
-    setSupported(isWebGPUSupported());
+    const supported = isWebGPUSupported();
+    console.log('🔍 WebGPU Support Check:', supported ? '✅ Supported' : '❌ Not Supported');
+    setSupported(supported);
   }, []);
 
   const updateResult = (name: string, update: Partial<DemoResult>) => {
@@ -50,10 +53,16 @@ export default function App() {
   };
 
   const handleInitialize = async () => {
+    console.log('🚀 Initializing WebGPU...');
     try {
       const info = await initializeGPU();
+      console.log('✅ WebGPU initialized successfully!');
+      console.log('   Vendor:', info.info.vendor);
+      console.log('   Device:', info.info.device);
+      console.log('   Architecture:', info.info.architecture);
       setGpuInfo(info);
     } catch (err: any) {
+      console.error('❌ WebGPU initialization failed:', err.message);
       setError(err.message);
     }
   };
@@ -214,17 +223,30 @@ export default function App() {
               <button
                 style={{
                   ...styles.tab,
+                  ...(activeTab === 'training' ? styles.tabActive : {}),
+                }}
+                onClick={() => setActiveTab('training')}
+              >
+                🎓 Browser Training (WASM)
+              </button>
+              <button
+                style={{
+                  ...styles.tab,
                   ...(activeTab === 'mnist' ? styles.tabActive : {}),
                 }}
                 onClick={() => setActiveTab('mnist')}
               >
-                🎨 MNIST Demo (requires training)
+                🎨 MNIST Inference
               </button>
             </div>
           </div>
 
           {activeTab === 'mnist' && (
             <MNISTDemo gpuInfo={gpuInfo} />
+          )}
+
+          {activeTab === 'training' && (
+            <TrainingDemo gpuInfo={gpuInfo} />
           )}
 
           {activeTab === 'benchmarks' && (
