@@ -142,7 +142,7 @@ export class MNISTModel {
  * Load MNIST model weights from URL or local file
  */
 export async function loadMNISTWeights(url?: string): Promise<ModelWeights> {
-  const modelUrl = url || '/public/models/mnist-mlp.json';
+  const modelUrl = url || '/models/mnist-mlp.json';
 
   try {
     // Try to load from file/URL
