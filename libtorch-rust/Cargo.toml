@@ -1,0 +1,42 @@
+[package]
+name = "libtorch-rust"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+description = "Pure Rust implementation of PyTorch/LibTorch with API compatibility to tch-rs"
+keywords = ["machine-learning", "deep-learning", "neural-networks", "tensor", "pytorch"]
+categories = ["science", "mathematics"]
+
+[dependencies]
+libtorch-rust-sys = { path = "../libtorch-rust-sys" }
+half.workspace = true
+libc.workspace = true
+lazy_static.workspace = true
+once_cell.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+safetensors.workspace = true
+image.workspace = true
+thiserror.workspace = true
+anyhow.workspace = true
+rand.workspace = true
+rand_distr.workspace = true
+
+[dev-dependencies]
+criterion.workspace = true
+proptest.workspace = true
+approx = "0.5"
+
+[lib]
+name = "tch"
+path = "src/lib.rs"
+
+[[example]]
+name = "tensor_operations"
+path = "../examples/tensor_operations.rs"
+
+[[example]]
+name = "simple_nn"
+path = "../examples/simple_nn.rs"

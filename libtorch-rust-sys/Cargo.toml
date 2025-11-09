@@ -1,0 +1,19 @@
+[package]
+name = "libtorch-rust-sys"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+description = "Low-level implementation for libtorch-rust"
+
+[dependencies]
+half.workspace = true
+libc.workspace = true
+once_cell.workspace = true
+thiserror.workspace = true
+rand.workspace = true
+
+[lib]
+name = "libtorch_rust_sys"
+path = "src/lib.rs"
