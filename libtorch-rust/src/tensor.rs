@@ -410,6 +410,11 @@ impl Tensor {
     pub fn accumulate_grad(&mut self, new_grad: Tensor) -> crate::Result<()> {
         self.inner.accumulate_grad(new_grad.inner)
     }
+
+    /// Check if this tensor has a gradient function (was created by an operation)
+    pub fn has_grad_fn(&self) -> bool {
+        self.inner.grad_fn().is_some()
+    }
 }
 
 // Operator overloading

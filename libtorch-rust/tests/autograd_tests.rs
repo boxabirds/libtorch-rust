@@ -143,3 +143,80 @@ fn test_set_grad_enabled() {
     set_grad_enabled(true);
     assert_eq!(is_grad_enabled(), true);
 }
+
+// ============================================================
+// Phase 1.2: Tape Recording Tests
+// ============================================================
+
+#[test]
+fn test_mul_records_grad_fn() {
+    // Create tensors with requires_grad=true
+    let mut x = Tensor::from_slice(&[2.0, 3.0]);
+    let mut y = Tensor::from_slice(&[4.0, 5.0]);
+
+    x.set_requires_grad(true);
+    y.set_requires_grad(true);
+
+    // Multiply: z = x * y
+    let z = &x * &y;
+
+    // z should have requires_grad=true
+    assert_eq!(z.requires_grad(), true);
+
+    // z should have a grad_fn (the MulBackward operation)
+    assert!(z.has_grad_fn(), "z should have a grad_fn");
+}
+
+#[test]
+fn test_mul_no_grad_guard() {
+    use tch::autograd::NoGradGuard;
+
+    let mut x = Tensor::from_slice(&[2.0]);
+    let mut y = Tensor::from_slice(&[3.0]);
+
+    x.set_requires_grad(true);
+    y.set_requires_grad(true);
+
+    // Inside NoGradGuard, operations should not record
+    {
+        let _guard = NoGradGuard::new();
+        let z = &x * &y;
+
+        // z should NOT have a grad_fn
+        assert!(!z.has_grad_fn(), "z should not have grad_fn inside NoGradGuard");
+    }
+
+    // Outside NoGradGuard, operations should record
+    let z = &x * &y;
+    assert!(z.has_grad_fn(), "z should have grad_fn outside NoGradGuard");
+}
+
+#[test]
+fn test_requires_grad_propagates_to_result() {
+    let mut x = Tensor::from_slice(&[1.0]);
+    let y = Tensor::from_slice(&[2.0]);
+
+    // Only x requires grad
+    x.set_requires_grad(true);
+
+    let z = &x * &y;
+
+    // z should inherit requires_grad
+    assert_eq!(z.requires_grad(), true);
+}
+
+#[test]
+fn test_no_requires_grad_no_grad_fn() {
+    let x = Tensor::from_slice(&[1.0]);
+    let y = Tensor::from_slice(&[2.0]);
+
+    // Neither requires grad
+    assert_eq!(x.requires_grad(), false);
+    assert_eq!(y.requires_grad(), false);
+
+    let z = &x * &y;
+
+    // z should not have grad_fn
+    assert!(!z.has_grad_fn());
+    assert_eq!(z.requires_grad(), false);
+}

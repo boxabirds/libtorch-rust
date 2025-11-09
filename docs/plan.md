@@ -73,14 +73,16 @@ This plan details the implementation of GPU-accelerated training for libtorch-ru
   - [x] `set_grad_enabled(bool)` - global control
   - [x] Thread-local GRAD_MODE storage
 
-- [ ] `libtorch-rust-sys/src/autograd/backward.rs` - Topological sort (TODO)
-  - [ ] Implement topological sort for backward traversal
+- [x] `libtorch-rust-sys/src/autograd/backward.rs` - Topological sort ✅
+  - [x] Implement `topological_sort_grad_fns()`
+  - [x] DFS traversal of GradNode graph
+  - [x] Tests: simple chain, diamond graph, no grad_fn
 
 **Validation:**
 - ✅ Gradient mode can be toggled
 - ✅ NoGradGuard works correctly (tested)
-- [ ] Operations record edges when `requires_grad=true` (not yet implemented)
-- [ ] Topological sort produces correct backward order
+- ✅ Topological sort produces correct backward order (3 tests passing)
+- [ ] Operations record edges when `requires_grad=true` (next step)
 
 ### 1.3 Backward Pass Infrastructure
 

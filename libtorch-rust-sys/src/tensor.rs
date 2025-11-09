@@ -473,7 +473,21 @@ impl TensorImpl {
 
     /// Element-wise multiplication
     pub fn mul(&self, other: &TensorImpl) -> Result<TensorImpl> {
-        self.binary_op(other, |a, b| a * b)
+        let mut result = self.binary_op(other, |a, b| a * b)?;
+
+        // Record operation for autograd if either input requires grad and grad is enabled
+        if crate::autograd::is_grad_enabled() && (self.requires_grad || other.requires_grad) {
+            use crate::autograd::ops::MulBackward;
+
+            // Set requires_grad on result
+            result.requires_grad = true;
+
+            // Create backward node and set as grad_fn
+            let mul_backward = MulBackward::new(self, other);
+            result.set_grad_fn(mul_backward);
+        }
+
+        Ok(result)
     }
 
     /// Element-wise division

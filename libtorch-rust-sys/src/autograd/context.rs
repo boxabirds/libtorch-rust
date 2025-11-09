@@ -21,14 +21,16 @@ pub fn set_grad_enabled(enabled: bool) {
 ///
 /// # Example
 /// ```
-/// let x = Tensor::ones(&[2, 2], Kind::Float, Device::Cpu).set_requires_grad(true);
+/// use libtorch_rust_sys::autograd::{is_grad_enabled, NoGradGuard};
+///
+/// assert_eq!(is_grad_enabled(), true);
 ///
 /// {
 ///     let _guard = NoGradGuard::new();
-///     let y = &x + &x;  // This operation won't be recorded
+///     assert_eq!(is_grad_enabled(), false);
 /// }
 ///
-/// let z = &x + &x;  // This operation will be recorded
+/// assert_eq!(is_grad_enabled(), true);
 /// ```
 pub struct NoGradGuard {
     prev_mode: bool,
