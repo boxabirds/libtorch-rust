@@ -6,7 +6,8 @@
   "scripts": {
     "predev": "bun run scripts/download-model.ts",
     "dev": "bun run dev-server.ts",
-    "serve": "python3 -m http.server 8000",
+    "build": "bun run build.ts",
+    "serve-dist": "cd dist && python3 -m http.server 8000",
     "download-model": "bun run scripts/download-model.ts"
   },
   "dependencies": {

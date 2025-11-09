@@ -1,11 +1,26 @@
 /**
  * Development server for WebGPU demo
- * Serves static files from public/ at root path
+ * Builds the app and serves the dist folder with live reload
  */
 
-const PORT = 3000;
+import { watch } from 'fs';
 
-const server = Bun.serve({
+const PORT = 3000;
+let building = false;
+
+// Initial build
+await buildApp();
+
+// Watch for changes and rebuild
+console.log('👀 Watching for changes...\n');
+watch('./src', { recursive: true }, async (event, filename) => {
+  if (building) return;
+  console.log(`📝 File changed: ${filename}`);
+  await buildApp();
+});
+
+// Start server
+Bun.serve({
   port: PORT,
   async fetch(req) {
     const url = new URL(req.url);
@@ -16,17 +31,17 @@ const server = Bun.serve({
       filePath = '/index.html';
     }
 
-    // Try to serve from public folder first
-    if (filePath.startsWith('/models/')) {
-      const publicPath = `./public${filePath}`;
-      const file = Bun.file(publicPath);
+    // Serve from dist/public for /models, /public paths
+    if (filePath.startsWith('/models/') || filePath.startsWith('/public/')) {
+      const distPath = `./dist${filePath}`;
+      const file = Bun.file(distPath);
       if (await file.exists()) {
         return new Response(file);
       }
     }
 
-    // Serve other files from project root
-    const file = Bun.file(`.${filePath}`);
+    // Serve from dist folder
+    const file = Bun.file(`./dist${filePath}`);
     if (await file.exists()) {
       return new Response(file);
     }
@@ -37,5 +52,47 @@ const server = Bun.serve({
 });
 
 console.log(`🚀 Dev server running at http://localhost:${PORT}`);
-console.log(`📁 Serving public/ at root path`);
-console.log(`📄 Open http://localhost:${PORT} in your browser`);
+console.log(`📄 Open http://localhost:${PORT} in your browser\n`);
+
+// Build function
+async function buildApp() {
+  if (building) return;
+  building = true;
+
+  try {
+    const result = await Bun.build({
+      entrypoints: ['./src/main.tsx'],
+      outdir: './dist',
+      target: 'browser',
+      format: 'esm',
+      splitting: true,
+      minify: false,
+      sourcemap: 'inline',
+      publicPath: '/',
+    });
+
+    if (!result.success) {
+      console.error('❌ Build failed:');
+      for (const log of result.logs) {
+        console.error(log);
+      }
+      building = false;
+      return;
+    }
+
+    // Copy index.html
+    await Bun.write('./dist/index.html', await Bun.file('./index.html').text());
+
+    // Copy public folder to dist/public
+    await Bun.$`mkdir -p ./dist/public`.quiet();
+    await Bun.$`cp -r ./public/* ./dist/public/`.quiet().catch(() => {
+      // Ignore if public is empty
+    });
+
+    console.log('✅ Build complete');
+  } catch (err) {
+    console.error('❌ Build error:', err);
+  } finally {
+    building = false;
+  }
+}
