@@ -4,7 +4,6 @@
   "description": "Browser-based WebGPU demo for libtorch-rust",
   "type": "module",
   "scripts": {
-    "predev": "bun run build-wasm",
     "dev": "bun run dev-server.ts",
     "build": "bun run build.ts",
     "clean": "rm -rf dist",

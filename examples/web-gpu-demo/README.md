@@ -73,25 +73,22 @@ cd examples/web-gpu-demo
 # Install dependencies
 bun install
 
-# Build WASM trainer module (first time only)
-bun run build-wasm
+# First time setup (downloads data, trains model, builds WASM)
+bun run setup
 
-# Start dev server
+# Start dev server (fast!)
 bun run dev
 ```
 
-This will:
-1. **Build the WASM training module** from Rust code
-2. **Automatically download MNIST dataset** (if not already present, ~140MB)
-3. **Check for trained model weights** (optional)
-4. Start the dev server at http://localhost:3000
-
 **All demos work immediately!** Click "Initialize WebGPU" then explore:
-- **⚡ Benchmarks** - GPU compute operations
-- **🎓 Browser Training** - Train MNIST model in browser with WASM
-- **🎨 MNIST Inference** - Draw digits for recognition (requires pre-trained model)
+- **⚡ Benchmarks** - GPU compute operations (works out of the box)
+- **🎓 Browser Training** - Train MNIST model in browser with WASM (requires setup)
+- **🎨 MNIST Inference** - Draw digits for recognition (requires setup)
 
-**Note**: The first run will download the MNIST dataset (~140MB). Subsequent runs skip the download if the dataset already exists.
+**Note**:
+- GPU Benchmarks work without any setup
+- Training/Inference demos require `bun run setup` first time only
+- After setup, `bun run dev` starts instantly (no rebuilding/downloading)
 
 ### Alternative: Simple HTTP Server
 
@@ -313,7 +310,7 @@ Burn Framework (Rust ML)
 
 ### Rebuilding WASM
 
-After making changes to `libtorch-wasm-trainer`:
+Only needed when you modify Rust code in `libtorch-wasm-trainer`:
 
 ```bash
 cd examples/web-gpu-demo
@@ -324,6 +321,8 @@ This will:
 1. Compile the Rust crate to WASM
 2. Copy the generated files to `public/wasm/`
 3. Restart the dev server to see changes
+
+**Tip**: Browser automatically cache-busts WASM files, no need to rebuild every time!
 
 ## Next Steps
 
