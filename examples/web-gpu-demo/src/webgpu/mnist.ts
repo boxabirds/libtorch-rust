@@ -94,21 +94,34 @@ export class MNISTModel {
 }
 
 /**
- * Load MNIST model weights from URL or create synthetic weights for demo
+ * Load MNIST model weights from URL or local file
  */
 export async function loadMNISTWeights(url?: string): Promise<ModelWeights> {
-  if (url) {
-    // Load from URL (HuggingFace, etc.)
-    const response = await fetch(url);
+  const modelUrl = url || '/public/models/mnist-mlp.json';
+
+  try {
+    // Try to load from file/URL
+    const response = await fetch(modelUrl);
+
+    if (!response.ok) {
+      throw new Error(`Failed to load model: ${response.statusText}`);
+    }
+
     const data = await response.json();
+
+    // Handle different weight formats
+    const weights = data.weights || data;
+
     return {
-      fc1_weight: new Float32Array(data.fc1_weight),
-      fc1_bias: new Float32Array(data.fc1_bias),
-      fc2_weight: new Float32Array(data.fc2_weight),
-      fc2_bias: new Float32Array(data.fc2_bias),
+      fc1_weight: new Float32Array(weights.fc1_weight),
+      fc1_bias: new Float32Array(weights.fc1_bias),
+      fc2_weight: new Float32Array(weights.fc2_weight),
+      fc2_bias: new Float32Array(weights.fc2_bias),
     };
-  } else {
-    // Create synthetic weights for demo (Xavier initialization)
+  } catch (error) {
+    console.warn('Could not load model weights, using synthetic weights:', error);
+
+    // Fallback: Create synthetic weights (Xavier initialization)
     const createWeight = (rows: number, cols: number) => {
       const scale = Math.sqrt(2.0 / (rows + cols));
       const weights = new Float32Array(rows * cols);

@@ -4,8 +4,10 @@
   "description": "Browser-based WebGPU demo for libtorch-rust",
   "type": "module",
   "scripts": {
+    "predev": "bun run scripts/download-model.ts",
     "dev": "bun --bun run index.html",
-    "serve": "python3 -m http.server 8000"
+    "serve": "python3 -m http.server 8000",
+    "download-model": "bun run scripts/download-model.ts"
   },
   "dependencies": {
     "react": "^18.2.0",
