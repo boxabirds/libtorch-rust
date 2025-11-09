@@ -15,37 +15,58 @@ import { promisify } from 'util';
 
 const gunzipAsync = promisify(gunzip);
 
-const MNIST_BASE_URL = 'http://yann.lecun.com/exdb/mnist/';
+// Using multiple mirror sources for reliability
+// Primary: GitHub ossdata-cdn mirror (reliable)
+// Fallback: Direct PyTorch mirror
+const MNIST_MIRRORS = [
+  'https://ossci-datasets.s3.amazonaws.com/mnist/',
+  'https://storage.googleapis.com/cvdf-datasets/mnist/',
+];
+
 const DATA_DIR = join(import.meta.dir, '..', 'public', 'data');
 const MNIST_DIR = join(DATA_DIR, 'mnist');
 
 interface MNISTFile {
-  url: string;
   filename: string;
+  localName: string;
   type: 'images' | 'labels';
 }
 
 const MNIST_FILES: MNISTFile[] = [
-  { url: `${MNIST_BASE_URL}train-images-idx3-ubyte.gz`, filename: 'train-images.gz', type: 'images' },
-  { url: `${MNIST_BASE_URL}train-labels-idx1-ubyte.gz`, filename: 'train-labels.gz', type: 'labels' },
-  { url: `${MNIST_BASE_URL}t10k-images-idx3-ubyte.gz`, filename: 'test-images.gz', type: 'images' },
-  { url: `${MNIST_BASE_URL}t10k-labels-idx1-ubyte.gz`, filename: 'test-labels.gz', type: 'labels' },
+  { filename: 'train-images-idx3-ubyte.gz', localName: 'train-images.gz', type: 'images' },
+  { filename: 'train-labels-idx1-ubyte.gz', localName: 'train-labels.gz', type: 'labels' },
+  { filename: 't10k-images-idx3-ubyte.gz', localName: 'test-images.gz', type: 'images' },
+  { filename: 't10k-labels-idx1-ubyte.gz', localName: 'test-labels.gz', type: 'labels' },
 ];
 
 /**
- * Download a file from URL
+ * Download a file from URL with mirror fallback
  */
-async function downloadFile(url: string, outputPath: string): Promise<void> {
-  console.log(`   Downloading ${url}...`);
+async function downloadFile(filename: string, outputPath: string): Promise<void> {
+  for (let i = 0; i < MNIST_MIRRORS.length; i++) {
+    const url = MNIST_MIRRORS[i] + filename;
+    const mirrorName = i === 0 ? 'primary' : `fallback ${i}`;
 
-  const response = await fetch(url);
-  if (!response.ok) {
-    throw new Error(`Failed to download ${url}: ${response.statusText}`);
+    try {
+      console.log(`   Downloading from ${mirrorName}: ${filename}...`);
+      const response = await fetch(url);
+
+      if (!response.ok) {
+        console.log(`   ⚠️  Mirror ${mirrorName} failed: ${response.statusText}`);
+        continue; // Try next mirror
+      }
+
+      const buffer = await response.arrayBuffer();
+      writeFileSync(outputPath, Buffer.from(buffer));
+      console.log(`   ✅ Downloaded ${filename} (${(buffer.byteLength / 1024 / 1024).toFixed(1)} MB)`);
+      return; // Success!
+    } catch (error) {
+      console.log(`   ⚠️  Mirror ${mirrorName} error: ${error}`);
+      if (i === MNIST_MIRRORS.length - 1) {
+        throw new Error(`All mirrors failed for ${filename}`);
+      }
+    }
   }
-
-  const buffer = await response.arrayBuffer();
-  writeFileSync(outputPath, Buffer.from(buffer));
-  console.log(`   ✅ Saved to ${outputPath}`);
 }
 
 /**
@@ -209,8 +230,8 @@ async function downloadMNIST(): Promise<void> {
     // Download all files
     console.log('1️⃣ Downloading MNIST files...');
     for (const file of MNIST_FILES) {
-      const outputPath = join(MNIST_DIR, file.filename);
-      await downloadFile(file.url, outputPath);
+      const outputPath = join(MNIST_DIR, file.localName);
+      await downloadFile(file.filename, outputPath);
     }
 
     console.log('\n2️⃣ Decompressing and parsing files...');
@@ -270,7 +291,10 @@ async function downloadMNIST(): Promise<void> {
   } catch (error) {
     console.error('\n❌ Error downloading MNIST dataset:', error);
     console.error('\nYou can try again or download manually from:');
-    console.error('   http://yann.lecun.com/exdb/mnist/');
+    console.error('   https://ossci-datasets.s3.amazonaws.com/mnist/');
+    console.error('   https://storage.googleapis.com/cvdf-datasets/mnist/');
+    console.error('\nAlternatively, use PyTorch to download:');
+    console.error('   python scripts/train_mnist.py  (will download via torchvision)');
     process.exit(1);
   }
 }
